@@ -291,7 +291,7 @@ function mkChart(id, labels, datasets, extra){
 
 // ── Helpers ────────────────────────────────────────────────
 function fmt(v, dec){ return v==null?'--':(+v).toFixed(dec??1); }
-function fmtTime(ts){ if(!ts) return '--'; var s=typeof ts==='string'?ts.replace(' ','T'):String(ts); if(!/Z|[+-]\d{2}:/.test(s)) s+='Z'; const d=new Date(s); if(isNaN(d)) return String(ts).slice(0,16); return (d.getMonth()+1)+'/'+(d.getDate())+' '+(d.getHours()+'').padStart(2,'0')+':'+(d.getMinutes()+'').padStart(2,'0'); }
+function fmtTime(ts){ if(!ts) return '--'; var s=typeof ts==='string'?ts.replace(' ','T'):String(ts); const d=new Date(s); if(isNaN(d)) return String(ts).slice(0,16); return (d.getMonth()+1)+'/'+(d.getDate())+' '+(d.getHours()+'').padStart(2,'0')+':'+(d.getMinutes()+'').padStart(2,'0'); }
 
 function setBadge(id, val, breaks, labels){
   const el = document.getElementById(id); if(!el) return;
