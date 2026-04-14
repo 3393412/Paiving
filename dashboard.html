@@ -165,10 +165,12 @@
     </div>
 
     <div class="card">
-      <div class="chart-title">PM2.5 + UV Index (24 ชม.)</div>
+      <div class="chart-title">PM2.5 · อุณหภูมิ · UV · ฝน (24 ชม.)</div>
       <div class="legend">
-        <div class="legend-item"><span class="legend-dot" style="background:#f87171"></span>PM2.5</div>
-        <div class="legend-item"><span class="legend-dot" style="background:#fbbf24;border-top:2px dashed #fbbf24;height:0"></span>UV Index</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#60a5fa"></span>PM2.5</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#f87171"></span>อุณหภูมิ °C</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#fbbf24"></span>UV Index</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#4ade80"></span>ฝน %</div>
       </div>
       <div class="chart-wrap" style="height:200px"><canvas id="chart-ov" role="img" aria-label="PM2.5 and UV Index over 24 hours">PM2.5 and UV Index trend over the last 24 hours.</canvas></div>
     </div>
@@ -289,7 +291,7 @@ function mkChart(id, labels, datasets, extra){
 
 // ── Helpers ────────────────────────────────────────────────
 function fmt(v, dec){ return v==null?'--':(+v).toFixed(dec??1); }
-function fmtTime(ts){ const d=new Date(ts); return (d.getMonth()+1)+'/'+(d.getDate())+' '+(d.getHours()+'').padStart(2,'0')+':'+(d.getMinutes()+'').padStart(2,'0'); }
+function fmtTime(ts){ if(!ts) return '--'; var s=typeof ts==='string'?ts.replace(' ','T'):String(ts); if(!/Z|[+-]\d{2}:/.test(s)) s+='Z'; const d=new Date(s); if(isNaN(d)) return String(ts).slice(0,16); return (d.getMonth()+1)+'/'+(d.getDate())+' '+(d.getHours()+'').padStart(2,'0')+':'+(d.getMinutes()+'').padStart(2,'0'); }
 
 function setBadge(id, val, breaks, labels){
   const el = document.getElementById(id); if(!el) return;
@@ -356,9 +358,8 @@ async function loadSensor(){
       mkDs('PM1.0',pm1d,'#60a5fa'), mkDs('PM2.5',pm25d,'#f87171'), mkDs('PM10',pm10d,'#fbbf24',[3,2])
     ]);
     mkChart('chart-light', lbs, [ mkDs('แสง',lghtd,'#4ade80') ]);
-    mkChart('chart-ov', lbs, [
-      mkDs('PM2.5',pm25d,'#f87171'), mkDs('UV Index',Array(lbs.length).fill(null),'#fbbf24',[4,3])
-    ]);
+    // เก็บ PM2.5 ไว้รอ merge กับ weather ใน overview chart
+    window._sensorOv = { lbs, pm25d };
   }
 }
 
@@ -400,15 +401,42 @@ async function loadWeather(){
     const tmpd  = hist.map(r=>r.temperature);
     const humd  = hist.map(r=>r.humidity);
     const uvd   = hist.map(r=>r.uv_index);
+    const raind = hist.map(r=>r.rain_probability);
 
     mkChart('chart-wth', lbs, [ mkDs('อุณหภูมิ',tmpd,'#f87171'), mkDs('ความชื้น',humd,'#60a5fa',[4,3]) ]);
     mkChart('chart-wuv', lbs, [ mkDs('UV',uvd,'#fbbf24') ]);
-
-    if(charts['chart-ov']){
-      charts['chart-ov'].data.datasets[1].data = uvd;
-      charts['chart-ov'].data.labels = lbs;
-      charts['chart-ov'].update();
+    // Overview: PM2.5 (sensor) + Temp + UV + Rain (weather) — dual Y axis
+    var ovPm25 = [];
+    if(window._sensorOv && window._sensorOv.pm25d.length){
+      // resample: ใช้ค่า sensor PM2.5 ล่าสุด ณ แต่ละ timestamp ของ weather
+      var sLbs = window._sensorOv.lbs, sPm = window._sensorOv.pm25d;
+      ovPm25 = lbs.map(function(wt){
+        var idx = sLbs.indexOf(wt);
+        if(idx>=0) return sPm[idx];
+        // หาค่า sensor ที่ใกล้ที่สุด
+        var best=null, bestDiff=Infinity;
+        sLbs.forEach(function(st,i){ var d=Math.abs(new Date(st)-new Date(wt)); if(d<bestDiff){bestDiff=d;best=sPm[i];} });
+        return best;
+      });
     }
+    if(charts['chart-ov']) charts['chart-ov'].destroy();
+    charts['chart-ov'] = new Chart(document.getElementById('chart-ov'),{
+      type:'line',
+      data:{ labels:lbs, datasets:[
+        { label:'PM2.5', data:ovPm25, borderColor:'#60a5fa', backgroundColor:'transparent', borderWidth:1.5, pointRadius:0, tension:0.35, yAxisID:'yL' },
+        { label:'อุณหภูมิ', data:tmpd, borderColor:'#f87171', backgroundColor:'transparent', borderWidth:1.5, pointRadius:0, tension:0.35, yAxisID:'yR' },
+        { label:'UV Index', data:uvd, borderColor:'#fbbf24', backgroundColor:'transparent', borderWidth:1.5, borderDash:[4,3], pointRadius:0, tension:0.35, yAxisID:'yL' },
+        { label:'ฝน', data:raind, borderColor:'#4ade80', backgroundColor:'transparent', borderWidth:1.5, borderDash:[2,3], pointRadius:0, tension:0.35, yAxisID:'yL' }
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{mode:'index',intersect:false} },
+        scales:{
+          x:{ ticks:{maxTicksLimit:6,color:'#6b7280',font:{size:10}}, grid:{color:'rgba(255,255,255,.04)'}, border:{color:'rgba(255,255,255,.07)'} },
+          yL:{ position:'left',  ticks:{color:'#6b7280',font:{size:10}}, grid:{color:'rgba(255,255,255,.04)'}, border:{color:'rgba(255,255,255,.07)'} },
+          yR:{ position:'right', ticks:{color:'#6b7280',font:{size:10}}, grid:{drawOnChartArea:false}, border:{color:'rgba(255,255,255,.07)'} }
+        }
+      }
+    });
   }
 }
 
