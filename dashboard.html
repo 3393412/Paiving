@@ -1,477 +1,1862 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PaiVing — Running Environment Monitor</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>PaiVing — Chatuchak Running Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@300;400;500;600;700;800&family=Fira+Code:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
-  /* ── Base ───────────────────────────────────────────── */
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  :root {
-    --bg:       #0d0f12;
-    --surface:  #13161b;
-    --card:     #1a1e25;
-    --border:   rgba(255,255,255,.07);
-    --border2:  rgba(255,255,255,.13);
-    --text:     #e8eaed;
-    --muted:    #6b7280;
-    --accent:   #4ade80;
-    --warn:     #fbbf24;
-    --danger:   #f87171;
-    --blue:     #60a5fa;
-    --mono:     'DM Mono', monospace;
-    --sans:     'Syne', sans-serif;
-  }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
-  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+:root{
 
-  /* ── Layout ─────────────────────────────────────────── */
-  header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 18px 28px; border-bottom: 1px solid var(--border);
-    position: sticky; top: 0; background: var(--bg); z-index: 10;
-  }
-  .logo { font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
-  .logo span { color: var(--accent); }
-  .header-right { display: flex; align-items: center; gap: 16px; }
-  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: pulse 1.6s ease-in-out infinite; }
-  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.85)} }
-  #clock { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+  --bg:       #080b10;
+  --surface:  #0d1117;
+  --card:     #111820;
+  --card2:    #141c26;
+  --border:   rgba(255,255,255,.06);
+  --border2:  rgba(255,255,255,.11);
 
-  .container { max-width: 1100px; margin: 0 auto; padding: 24px 28px; }
 
-  /* ── Tabs ───────────────────────────────────────────── */
-  .tabs { display: flex; gap: 4px; margin-bottom: 24px; background: var(--surface); padding: 4px; border-radius: 10px; border: 1px solid var(--border); width: fit-content; }
-  .tab { padding: 7px 18px; font-size: 13px; font-weight: 500; cursor: pointer; border-radius: 7px; border: none; background: transparent; color: var(--muted); font-family: var(--sans); transition: all .2s; }
-  .tab.active { background: var(--card); color: var(--text); border: 1px solid var(--border2); }
+  --text:     #dde4ee;
+  --muted:    #5a6a7e;
+  --dim:      #3a4858;
 
-  /* ── Cards ──────────────────────────────────────────── */
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
-  .card-label { font-size: 11px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 6px; }
-  .card-val { font-size: 26px; font-weight: 700; font-family: var(--mono); line-height: 1; }
-  .card-sub { font-size: 11px; color: var(--muted); margin-top: 5px; }
 
-  .grid-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 20px; }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+  --green:    #22d3a0;
+  --yellow:   #f0b429;
+  --orange:   #f97316;
+  --red:      #ef4444;
+  --purple:   #a855f7;
+  --blue:     #38bdf8;
+  --teal:     #14b8a6;
+  --pink:     #ec4899;
 
-  /* ── Badge ──────────────────────────────────────────── */
-  .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; font-family: var(--mono); }
-  .badge-ok   { background: rgba(74,222,128,.12); color: var(--accent); border: 1px solid rgba(74,222,128,.2); }
-  .badge-warn { background: rgba(251,191,36,.12);  color: var(--warn);   border: 1px solid rgba(251,191,36,.2); }
-  .badge-bad  { background: rgba(248,113,113,.12); color: var(--danger); border: 1px solid rgba(248,113,113,.2); }
+  --aqi-good:       #22d3a0;;
+  --aqi-well:       #84cc16;
+  --aqi-moderate:   #facc15;
+  --aqi-usg:        #f88b32;
+  --aqi-unhealthy:  #ef4444;
+  --aqi-vunhealthy: #7f1d1d;
+  --aqi-hazardous:  #7f1d1d;
 
-  /* ── Score ──────────────────────────────────────────── */
-  .score-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 14px; display: flex; align-items: center; gap: 20px; }
-  .score-num  { font-size: 48px; font-weight: 700; font-family: var(--mono); color: var(--accent); line-height: 1; }
-  .score-bar-bg { flex: 1; height: 6px; background: rgba(255,255,255,.08); border-radius: 3px; overflow: hidden; }
-  .score-bar  { height: 100%; border-radius: 3px; background: var(--accent); transition: width .6s ease; }
 
-  /* ── Chart wrapper ──────────────────────────────────── */
-  .chart-wrap { position: relative; width: 100%; }
-  .chart-title { font-size: 12px; color: var(--muted); margin-bottom: 12px; letter-spacing: .04em; }
-  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 10px; }
-  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); font-family: var(--mono); }
-  .legend-dot { width: 8px; height: 2px; border-radius: 1px; }
+  --score-excellent: #22d3a0;
+  --score-good:      #84cc16;
+  --score-moderate:  #f0b429;
+  --score-poor:      #f97316;
+  --score-hazardous: #ef4444;
 
-  /* ── Section visibility ─────────────────────────────── */
-  .section { display: none; }
-  .section.active { display: block; }
 
-  /* ── Status bar ─────────────────────────────────────── */
-  #status-bar { font-size: 11px; color: var(--muted); margin-bottom: 18px; font-family: var(--mono); display: flex; align-items: center; gap: 8px; }
-  .dot-ok   { width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0; }
-  .dot-err  { width:6px;height:6px;border-radius:50%;background:var(--danger);flex-shrink:0; }
+  --sans: 'Bricolage Grotesque', system-ui, sans-serif;
+  --mono: 'Fira Code', 'Cascadia Code', monospace;
+}
 
-  /* ── Table ──────────────────────────────────────────── */
-  .tbl { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; }
-  .tbl th { color: var(--muted); font-weight: 400; text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); }
-  .tbl td { padding: 7px 10px; border-bottom: 1px solid var(--border); color: var(--text); }
-  .tbl tr:last-child td { border-bottom: none; }
-  .tbl tr:hover td { background: rgba(255,255,255,.02); }
+body{
+  font-family:var(--sans);
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  line-height:1.5;
+  font-size:14px;
+}
 
-  /* ── Config box ─────────────────────────────────────── */
-  .cfg-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .cfg-box label { font-size: 12px; color: var(--muted); }
-  .cfg-box input { background: var(--card); border: 1px solid var(--border2); color: var(--text); border-radius: 6px; padding: 6px 10px; font-family: var(--mono); font-size: 12px; width: 240px; }
-  .cfg-box input:focus { outline: none; border-color: var(--accent); }
-  .btn { padding: 7px 16px; border-radius: 7px; border: 1px solid var(--border2); background: var(--card); color: var(--text); font-family: var(--sans); font-size: 13px; cursor: pointer; transition: background .15s; }
-  .btn:hover { background: rgba(255,255,255,.07); }
 
-  @media(max-width:600px){
-    header { padding: 14px 16px; }
-    .container { padding: 16px; }
-    .grid-2 { grid-template-columns: 1fr; }
-    .score-num { font-size: 36px; }
-  }
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--dim);border-radius:2px}
+
+
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 24px;
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:20;
+  background:rgba(8,11,16,.92);
+  backdrop-filter:blur(12px);
+}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-logo{
+  font-family:var(--mono);font-size:18px;font-weight:600;
+  letter-spacing:-.5px;
+  background:linear-gradient(135deg,var(--green),var(--blue));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.brand-sub{font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:1px}
+.header-right{display:flex;align-items:center;gap:16px}
+.live-badge{
+  display:flex;align-items:center;gap:6px;
+  padding:4px 10px;border-radius:20px;
+  border:1px solid rgba(34,211,160,.2);
+  background:rgba(34,211,160,.06);
+  font-family:var(--mono);font-size:10px;color:var(--green);
+}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+#clock{font-family:var(--mono);font-size:12px;color:var(--muted)}
+
+
+.container{max-width:1280px;margin:0 auto;padding:20px 24px}
+
+
+.tab-bar{
+  display:flex;gap:2px;margin-bottom:20px;
+  background:var(--surface);padding:3px;border-radius:10px;
+  border:1px solid var(--border);width:fit-content;flex-wrap:wrap;
+}
+.tab-btn{
+  padding:6px 14px;font-size:11px;font-weight:500;
+  cursor:pointer;border-radius:8px;border:none;
+  background:transparent;color:var(--muted);
+  font-family:var(--sans);transition:.18s all;white-space:nowrap;letter-spacing:.02em;
+}
+.tab-btn.active{background:var(--card2);color:var(--text);border:1px solid var(--border2);box-shadow:0 1px 8px rgba(0,0,0,.3)}
+.tab-btn:hover:not(.active){color:var(--text);background:rgba(255,255,255,.04)}
+.section{display:none}.section.active{display:block}
+
+
+.card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:14px;padding:18px 20px;
+}
+.card-sm{padding:14px 16px}
+.card-label{
+  font-size:10px;color:var(--muted);letter-spacing:.1em;
+  text-transform:uppercase;margin-bottom:8px;
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+}
+.card-val{font-size:28px;font-weight:700;font-family:var(--mono);line-height:1.05}
+.card-sub{font-size:11px;color:var(--muted);margin-top:5px;font-family:var(--mono)}
+
+
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.gauto{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.mb8{margin-bottom:8px}.mb12{margin-bottom:12px}.mb14{margin-bottom:14px}
+.mb16{margin-bottom:16px}.mb20{margin-bottom:20px}.mt10{margin-top:10px}
+.flex-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+
+.pill{
+  display:inline-flex;align-items:center;
+  padding:1px 7px;border-radius:5px;
+  font-size:9px;font-family:var(--mono);font-weight:500;letter-spacing:.06em;line-height:1.7;
+}
+.pill-p{background:rgba(56,189,248,.1);color:var(--blue);border:1px solid rgba(56,189,248,.2)}
+.pill-s{background:rgba(249,115,22,.1);color:var(--orange);border:1px solid rgba(249,115,22,.2)}
+.pill-d{background:rgba(168,85,247,.1);color:var(--purple);border:1px solid rgba(168,85,247,.2)}
+.pill-r{background:rgba(34,211,160,.1);color:var(--green);border:1px solid rgba(34,211,160,.2)}
+.pill-e{background:rgba(240,180,41,.1);color:var(--yellow);border:1px solid rgba(240,180,41,.2)}
+
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:500;font-family:var(--mono)}
+.badge-ok  {background:rgba(34,211,160,.1);color:var(--green);border:1px solid rgba(34,211,160,.18)}
+.badge-warn{background:rgba(240,180,41,.1);color:var(--yellow);border:1px solid rgba(240,180,41,.18)}
+.badge-bad {background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.18)}
+.badge-null{background:rgba(90,106,126,.1);color:var(--muted);border:1px solid rgba(90,106,126,.2)}
+
+
+#status-bar{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  font-size:11px;color:var(--muted);margin-bottom:16px;font-family:var(--mono);
+}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dot-ok{background:var(--green)}.dot-err{background:var(--red)}
+.dot-load{background:var(--yellow);animation:pulse 1s ease-in-out infinite}
+
+
+.cfg{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:12px 16px;margin-bottom:16px;
+}
+.cfg label{font-size:11px;color:var(--muted);white-space:nowrap}
+.cfg input[type=text]{
+  background:var(--card);border:1px solid var(--border2);color:var(--text);
+  border-radius:6px;padding:5px 10px;font-family:var(--mono);font-size:11px;
+  width:200px;
+}
+.cfg input[type=text]:focus{outline:none;border-color:var(--green)}
+.cfg-div{width:1px;height:20px;background:var(--border2);margin:0 4px}
+
+.btn{
+  padding:6px 14px;border-radius:7px;border:1px solid var(--border2);
+  background:var(--card);color:var(--text);font-family:var(--sans);
+  font-size:12px;cursor:pointer;transition:.15s;white-space:nowrap;font-weight:500;
+}
+.btn:hover{background:rgba(255,255,255,.06)}
+.btn-green{border-color:rgba(34,211,160,.3);color:var(--green)}
+.btn-green:hover{background:rgba(34,211,160,.07)}
+
+
+.toggle-wrap{display:flex;align-items:center;gap:8px;cursor:pointer}
+.toggle-wrap input{position:absolute;opacity:0;width:0;height:0}
+.toggle-track{
+  width:34px;height:18px;border-radius:9px;position:relative;
+  background:rgba(255,255,255,.08);border:1px solid var(--border2);transition:.2s;
+}
+.toggle-thumb{
+  position:absolute;top:2px;left:2px;width:12px;height:12px;
+  border-radius:50%;background:var(--muted);transition:.2s;
+}
+.toggle-wrap input:checked~.toggle-track{background:rgba(34,211,160,.2);border-color:rgba(34,211,160,.4)}
+.toggle-wrap input:checked~.toggle-track .toggle-thumb{left:18px;background:var(--green)}
+.toggle-label{font-size:11px;color:var(--muted);font-family:var(--mono)}
+
+
+.load-overlay{
+  position:fixed;inset:0;background:rgba(8,11,16,.82);
+  backdrop-filter:blur(8px);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;z-index:100;gap:14px;
+}
+.load-overlay.hidden{display:none}
+.spinner{
+  width:36px;height:36px;border:2.5px solid rgba(255,255,255,.08);
+  border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-text{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.load-sub{font-family:var(--mono);font-size:10px;color:var(--dim)}
+
+
+.hero-grid{
+  display:grid;grid-template-columns:minmax(300px,380px) 1fr;
+  gap:16px;margin-bottom:16px;
+}
+.score-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:16px;padding:24px 26px;
+  display:flex;flex-direction:column;
+}
+.score-top-label{
+  font-size:9px;color:var(--muted);letter-spacing:.12em;
+  text-transform:uppercase;margin-bottom:6px;font-family:var(--mono);
+}
+.score-number{
+  font-size:80px;font-weight:800;font-family:var(--mono);
+  line-height:1;transition:color .5s;
+}
+.score-verdict{font-size:15px;font-weight:600;margin-top:6px;margin-bottom:14px}
+.score-context{
+  font-size:12px;color:var(--muted);line-height:1.7;
+  padding:10px 12px;background:rgba(255,255,255,.03);
+  border-radius:8px;border-left:2px solid var(--green);
+  font-style:italic;margin-bottom:16px;
+}
+
+
+.score-track{height:4px;background:rgba(255,255,255,.07);border-radius:2px;margin-bottom:20px;overflow:hidden}
+.score-fill{height:100%;border-radius:2px;transition:width .9s cubic-bezier(.4,0,.2,1)}
+
+
+.bk-section-title{
+  font-size:9px;color:var(--muted);letter-spacing:.1em;
+  text-transform:uppercase;margin-bottom:10px;font-family:var(--mono);
+}
+.bk-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.bk-name{
+  font-size:11px;color:var(--muted);font-family:var(--mono);
+  width:160px;flex-shrink:0;display:flex;align-items:center;gap:5px;
+}
+.bk-bar-bg{flex:1;height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden}
+.bk-bar-fill{height:100%;border-radius:2px;transition:width .7s cubic-bezier(.4,0,.2,1)}
+.bk-val{
+  font-size:10px;font-family:var(--mono);
+  width:36px;text-align:right;flex-shrink:0;
+}
+.bk-max{font-size:9px;color:var(--dim);font-family:var(--mono);flex-shrink:0}
+.bk-off{opacity:.35}
+
+
+.hero-right{display:flex;flex-direction:column;gap:12px}
+
+
+.aqi-card{
+  border-radius:14px;padding:18px 20px;position:relative;overflow:hidden;
+  transition:background .5s,border-color .5s;
+}
+.aqi-card::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at top right,rgba(34,211,160,.07) 0%,transparent 65%);
+  pointer-events:none;
+}
+.aqi-num{font-size:52px;font-weight:800;font-family:var(--mono);line-height:1;margin:4px 0}
+.aqi-cat{font-size:13px;font-weight:600;letter-spacing:.02em}
+.aqi-bar{
+  margin-top:10px;height:3px;border-radius:2px;
+  background:linear-gradient(to right,
+
+    var(--aqi-good) 0%,
+    var(--aqi-well) 31.24%,
+    var(--aqi-moderate) 31.25%,
+    var(--aqi-usg) 70%,
+    var(--aqi-unhealthy) 87%,
+    var(--aqi-vunhealthy) 95.3%,
+    var(--aqi-hazardous) 93.75%
+  );
+}
+
+.aqi-needle-wrap{position:relative;height:10px;margin-top:2px}
+.aqi-needle{
+  position:absolute;top:0;width:2px;height:10px;
+  background:rgb(255, 255, 255);border-radius:1px;transform:translateX(-50%);
+  transition:left .7s cubic-bezier(.4,0,.2,1);
+}
+
+
+.pm-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px}
+.pm-row{display:flex;align-items:baseline;gap:6px}
+.pm-val{font-size:32px;font-weight:700;font-family:var(--mono);color:var(--green)}
+.pm-unit{font-size:11px;color:var(--muted);font-family:var(--mono)}
+.pm-avg-row{display:flex;align-items:center;justify-content:space-between;margin-top:6px}
+.pm-avg{font-size:11px;color:var(--muted);font-family:var(--mono)}
+.trend-badge{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:1px 7px;border-radius:4px;font-size:10px;font-family:var(--mono);
+}
+.who-line{margin-top:8px;font-size:10px;color:var(--dim);font-family:var(--mono)}
+
+
+.weather-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.wcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.wcard-val{font-size:24px;font-weight:700;font-family:var(--mono);margin-top:4px}
+.heat-index-row{
+  font-size:10px;font-family:var(--mono);color:var(--muted);
+  margin-top:4px;padding-top:6px;border-top:1px solid var(--border);
+}
+
+
+.context-box{
+  background:linear-gradient(135deg,rgba(34,211,160,.05),rgba(56,189,248,.05));
+  border:1px solid rgba(34,211,160,.15);border-radius:12px;
+  padding:14px 18px;font-size:13px;color:var(--text);line-height:1.7;
+  margin-bottom:16px;
+}
+.context-box strong{color:var(--green)}
+
+
+.callout{border-radius:10px;padding:12px 16px;font-size:12px;line-height:1.75;margin-bottom:14px}
+.callout-title{font-weight:700;font-size:12px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.callout-blue  {background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.18);color:#7dd3fc}
+.callout-orange{background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.18);color:#fdba74}
+.callout-green {background:rgba(34,211,160,.06);border:1px solid rgba(34,211,160,.18);color:#6ee7b7}
+.callout-purple{background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.18);color:#d8b4fe}
+.callout-yellow{background:rgba(240,180,41,.06);border:1px solid rgba(240,180,41,.18);color:#fde68a}
+
+
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px}
+.chart-header{
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:8px;margin-bottom:14px;
+}
+.chart-title{font-size:12px;color:var(--muted);letter-spacing:.04em}
+.legend{display:flex;flex-wrap:wrap;gap:14px}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);font-family:var(--mono)}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.legend-line{width:16px;height:2px;flex-shrink:0}
+.legend-dash{width:16px;height:2px;border-top:2px dashed;flex-shrink:0}
+.chart-wrap{position:relative;width:100%}
+.chart-note{font-size:10px;color:var(--dim);font-family:var(--mono);margin-top:8px;line-height:1.6}
+
+
+.tbl{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px}
+.tbl th{
+  color:var(--muted);font-weight:400;text-align:left;
+  padding:7px 10px;border-bottom:1px solid var(--border);letter-spacing:.05em;
+}
+.tbl td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(255,255,255,.02)}
+
+
+.code-box{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:14px 18px;font-family:var(--mono);
+  font-size:11px;line-height:2;color:var(--text);overflow-x:auto;
+}
+.c-g{color:var(--green)}.c-y{color:var(--yellow)}.c-o{color:var(--orange)}
+.c-r{color:var(--red)}.c-b{color:var(--blue)}.c-p{color:var(--purple)}
+.c-dim{color:var(--dim)}.c-mut{color:var(--muted)}
+
+
+.align-table-wrap{overflow-x:auto}
+
+
+@media(max-width:900px){
+  .hero-grid{grid-template-columns:1fr}
+  .score-number{font-size:60px}
+  .g3,.g4{grid-template-columns:1fr 1fr}
+}
+@media(max-width:600px){
+  .container{padding:14px 16px}
+  header{padding:12px 16px}
+  .g2,.g3,.g4,.weather-row{grid-template-columns:1fr}
+  .bk-name{width:120px}
+  .cfg input[type=text]{width:130px}
+}
+
+
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.section.active>.card,.section.active>.hero-grid,.section.active>.g2,
+.section.active>.g3,.section.active>.gauto,.section.active>.chart-card,
+.section.active>.callout,.section.active>.context-box{
+  animation:fadeSlideIn .3s ease both;
+}
+
+
+.pipeline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0}
+.pipe-node{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:10px 14px;text-align:center;flex:1;min-width:120px;
+}
+.pipe-node h4{font-size:11px;font-weight:600;font-family:var(--mono);margin-bottom:3px}
+.pipe-node p{font-size:10px;color:var(--muted);line-height:1.5}
+.pipe-arrow{color:var(--dim);font-size:18px;flex-shrink:0}
+
+
+.excellent{color:var(--score-excellent)}
+.good-score{color:var(--score-good)}
+.moderate-score{color:var(--score-moderate)}
+.poor-score{color:var(--score-poor)}
+.hazardous-score{color:var(--score-hazardous)}
+
+
+.section-intro{
+  font-size:11px;color:var(--muted);line-height:1.75;
+  margin-bottom:16px;padding:10px 14px;
+  background:rgba(255,255,255,.02);border-radius:8px;
+  border-left:2px solid var(--border2);
+}
 </style>
 </head>
 <body>
 
+
+<div class="load-overlay" id="load-overlay">
+  <div class="spinner"></div>
+  <div class="load-text" id="load-text">Connecting to sensors...</div>
+  <div class="load-sub"  id="load-sub">Fetching all data sources</div>
+  <div style="margin-top:8px;font-family:var(--mono);font-size:10px;color:rgba(90,106,126,.7)" id="load-url"></div>
+</div>
+
+
 <header>
-  <div class="logo">Pai<span>Ving</span></div>
+  <div class="brand">
+    <div>
+      <div class="brand-logo">PaiVing</div>
+      <div class="brand-sub">Chatuchak Park · Running Monitor</div>
+    </div>
+  </div>
   <div class="header-right">
-    <div class="live-dot"></div>
-    <span id="clock">--:--:--</span>
+    <div class="live-badge"><div class="live-dot"></div>Live</div>
+    <span id="clock" style="font-family:var(--mono);font-size:11px;color:var(--muted)">--:--:--</span>
   </div>
 </header>
 
 <div class="container">
 
-  <!-- Config -->
-  <div class="cfg-box">
-    <label>Node-RED Host</label>
-    <input type="text" id="api-host" value="https://iot.cpe.ku.ac.th" placeholder="https://iot.cpe.ku.ac.th" style="width:220px">
-    <label style="margin-left:4px">Path prefix</label>
-    <input type="text" id="api-prefix" value="/red/b6710545717" placeholder="/b6710545717" style="width:130px">
-    <button class="btn" onclick="loadAll()">โหลดข้อมูล</button>
-    <button class="btn" onclick="toggleAuto()"><span id="auto-label">Auto OFF</span></button>
+
+<div class="cfg">
+  <label>Node-RED Host</label>
+  <input type="text" id="api-host"   value="https://iot.cpe.ku.ac.th">
+  <label>Prefix</label>
+  <input type="text" id="api-prefix" value="/red/b6710545717" style="width:140px">
+  <button class="btn btn-green" onclick="loadAll()">⟳ Refresh</button>
+  <button class="btn" onclick="toggleAuto()"><span id="auto-lbl">⏱ Auto OFF</span></button>
+  <button class="btn" id="dbg-btn" onclick="toggleDebug()" style="border-color:rgba(168,85,247,.3);color:var(--purple)">🔍 Debug</button>
+  <div class="cfg-div"></div>
+  <label class="toggle-wrap">
+    <input type="checkbox" id="rain-toggle" checked onchange="onRainToggle()">
+    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+    <span class="toggle-label">Rain in Score</span>
+  </label>
+</div>
+
+
+<div id="status-bar">
+  <div class="dot dot-ok" id="status-dot"></div>
+  <span id="status-msg">Connecting to sensors automatically...</span>
+</div>
+
+<pre id="dbg-panel" style="display:none;background:var(--surface);border:1px solid rgba(168,85,247,.2);border-radius:8px;padding:12px 14px;font-family:var(--mono);font-size:10px;color:var(--purple);margin-bottom:14px;max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;line-height:1.7">(no logs yet)</pre>
+
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('overview',this)">📊 Overview</button>
+  <button class="tab-btn" onclick="switchTab('sensor',this)">🏠 Indoor Baseline</button>
+  <button class="tab-btn" onclick="switchTab('outdoor',this)">🌤 Outdoor Data</button>
+  <button class="tab-btn" onclick="switchTab('integrate',this)">🔗 Integration</button>
+  <button class="tab-btn" onclick="switchTab('forecast',this)">📅 Forecast</button>
+</div>
+
+
+
+<div id="tab-overview" class="section active">
+
+  <div class="context-box mb16" id="context-box">
+    <strong>Loading...</strong> Fetching real-time data from all sources.
   </div>
 
-  <!-- Status -->
-  <div id="status-bar"><span class="dot-ok" id="status-dot"></span><span id="status-msg">กรอก URL แล้วกด โหลดข้อมูล</span></div>
+  <div class="hero-grid mb16">
 
-  <!-- Tabs -->
-  <div class="tabs">
-    <button class="tab active" onclick="switchTab('overview',this)">ภาพรวม</button>
-    <button class="tab" onclick="switchTab('sensor',this)">Sensor</button>
-    <button class="tab" onclick="switchTab('weather',this)">Weather</button>
-    <button class="tab" onclick="switchTab('forecast',this)">Forecast</button>
+
+    <div class="score-card">
+      <div class="score-top-label">Running Condition Score — Chatuchak Park</div>
+      <div class="score-number" id="score-num" style="color:var(--score-good)">--</div>
+      <div class="score-verdict" id="score-verdict" style="color:var(--muted)">Waiting for data...</div>
+      <div class="score-track"><div class="score-fill" id="score-fill" style="width:0%;background:var(--score-good)"></div></div>
+      <div class="context-box" id="score-explain" style="margin-bottom:14px;font-size:11px">
+        Score is computed from AQI (IQAir), PM2.5 (OpenAQ), temperature, humidity, UV, and rain.
+      </div>
+      <div class="bk-section-title">Score Breakdown — penalties deducted from 100</div>
+
+      <div class="bk-row">
+        <span class="bk-name"><span class="pill pill-s">S</span>AQI (US)</span>
+        <div class="bk-bar-bg"><div class="bk-bar-fill" id="bk-aqi" style="width:100%;background:var(--green)"></div></div>
+        <span class="bk-val" id="bk-aqi-v" style="color:var(--green)">0</span>
+        <span class="bk-max">/45</span>
+      </div>
+
+      <div class="bk-row">
+        <span class="bk-name"><span class="pill pill-s">S</span>PM2.5</span>
+        <div class="bk-bar-bg"><div class="bk-bar-fill" id="bk-pm" style="width:100%;background:var(--green)"></div></div>
+        <span class="bk-val" id="bk-pm-v" style="color:var(--green)">0</span>
+        <span class="bk-max">/10</span>
+      </div>
+
+      <div class="bk-row">
+        <span class="bk-name"><span class="pill pill-s">S</span>Temperature</span>
+        <div class="bk-bar-bg"><div class="bk-bar-fill" id="bk-temp" style="width:100%;background:var(--green)"></div></div>
+        <span class="bk-val" id="bk-temp-v" style="color:var(--green)">0</span>
+        <span class="bk-max">/20</span>
+      </div>
+
+      <div class="bk-row">
+        <span class="bk-name"><span class="pill pill-s">S</span>Heat Stress</span>
+        <div class="bk-bar-bg"><div class="bk-bar-fill" id="bk-hum" style="width:100%;background:var(--green)"></div></div>
+        <span class="bk-val" id="bk-hum-v" style="color:var(--green)">0</span>
+        <span class="bk-max">/8</span>
+      </div>
+
+      <div class="bk-row">
+        <span class="bk-name"><span class="pill pill-s">S</span>UV Index</span>
+        <div class="bk-bar-bg"><div class="bk-bar-fill" id="bk-uv" style="width:100%;background:var(--green)"></div></div>
+        <span class="bk-val" id="bk-uv-v" style="color:var(--green)">0</span>
+        <span class="bk-max">/15</span>
+      </div>
+
+      <div class="bk-row" id="bk-rain-row">
+        <span class="bk-name" id="bk-rain-label"><span class="pill pill-s">S</span>Rain</span>
+        <div class="bk-bar-bg"><div class="bk-bar-fill" id="bk-rain" style="width:100%;background:var(--green)"></div></div>
+        <span class="bk-val" id="bk-rain-v" style="color:var(--green)">0</span>
+        <span class="bk-max">/15</span>
+      </div>
+      <div style="margin-top:10px">
+        <div class="flex-row" style="font-size:10px;color:var(--dim);font-family:var(--mono)">
+          <span class="pill pill-p">P</span> Primary ·
+          <span class="pill pill-s">S</span> Secondary ·
+          <span class="pill pill-d">D</span> Derived
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-right">
+
+
+      <div class="aqi-card card" id="aqi-card">
+        <div class="card-label"><span class="pill pill-s">S</span> AQI-US &nbsp;·&nbsp; Source: IQAir</div>
+        <div class="aqi-num" id="aqi-num">--</div>
+        <div class="aqi-cat" id="aqi-cat" style="color:var(--muted)">Waiting...</div>
+        <div class="aqi-bar mt10"></div>
+        <div class="aqi-needle-wrap"><div class="aqi-needle" id="aqi-needle" style="left:0%"></div></div>
+        <div style="font-size:10px;color:var(--dim);font-family:var(--mono);margin-top:6px">
+          US EPA scale · NowCast method · primary air quality factor
+        </div>
+      </div>
+
+      <div class="pm-card">
+        <div class="card-label"><span class="pill pill-s">S</span> PM2.5 &nbsp;·&nbsp; Source: OpenAQ sensor 2076226</div>
+        <div class="pm-row">
+          <div class="pm-val" id="pm-latest">--</div>
+          <div class="pm-unit">µg/m³</div>
+          <div style="margin-left:auto"><span class="trend-badge" id="pm-trend" style="background:rgba(90,106,126,.15);color:var(--muted)">→ —</span></div>
+        </div>
+        <div class="pm-avg-row">
+          <span class="pm-avg">24h avg: <strong id="pm-avg24h" style="color:var(--text)">--</strong> µg/m³</span>
+          <span class="badge badge-ok" id="pm-badge">--</span>
+        </div>
+        <div class="who-line">WHO guideline: 15 µg/m³ (24h) · EPA moderate: &gt;12.0</div>
+      </div>
+
+
+      <div class="weather-row">
+        <div class="wcard">
+          <div class="card-label"><span class="pill pill-s">S</span> Temperature · IQAir</div>
+          <div class="wcard-val" id="ov-temp">--°C</div>
+          <div style="margin-top:4px"><span class="badge badge-ok" id="ov-temp-b">--</span></div>
+        </div>
+        <div class="wcard">
+          <div class="card-label"><span class="pill pill-s">S</span> Humidity · IQAir</div>
+          <div class="wcard-val" id="ov-hum">--%</div>
+          <div class="heat-index-row">Heat stress: <span id="ov-heat-stress">--</span></div>
+        </div>
+      </div>
+
+    </div>
   </div>
 
-  <!-- ── OVERVIEW ───────────────────────────────────── -->
-  <div id="tab-overview" class="section active">
-    <div class="score-wrap">
+
+  <div class="chart-card mb16">
+    <div class="chart-header">
       <div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Running Score</div>
-        <div class="score-num" id="score-num">--</div>
-        <div style="font-size:12px;margin-top:4px" id="score-label">รอข้อมูล...</div>
+        <div class="chart-title">PM2.5 (OpenAQ) + AQI-US (IQAir) — 24-Hour Hourly</div>
+        <div style="font-size:10px;color:var(--dim);font-family:var(--mono);margin-top:2px">
+          Both series on hourly interval · Dual Y-axis · WHO 15 µg/m³ reference line
+        </div>
       </div>
-      <div style="flex:1">
-        <div class="score-bar-bg"><div class="score-bar" id="score-bar" style="width:0%"></div></div>
-        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px;font-family:var(--mono)"><span>0</span><span>50</span><span>100</span></div>
-      </div>
-    </div>
-
-    <div class="grid-metrics">
-      <div class="card"><div class="card-label">PM2.5</div><div class="card-val" id="ov-pm25">--</div><div class="card-sub"><span class="badge badge-ok" id="ov-pm25-b">--</span></div></div>
-      <div class="card"><div class="card-label">PM10</div><div class="card-val" id="ov-pm10">--</div><div class="card-sub" style="color:var(--muted);font-size:11px">µg/m³</div></div>
-      <div class="card"><div class="card-label">แสง</div><div class="card-val" id="ov-light">--</div><div class="card-sub" style="color:var(--muted);font-size:11px">KY-018</div></div>
-      <div class="card"><div class="card-label">อุณหภูมิ</div><div class="card-val" id="ov-temp">--</div><div class="card-sub"><span class="badge badge-ok" id="ov-temp-b">--</span></div></div>
-      <div class="card"><div class="card-label">UV Index</div><div class="card-val" id="ov-uv">--</div><div class="card-sub"><span class="badge badge-ok" id="ov-uv-b">--</span></div></div>
-      <div class="card"><div class="card-label">ฝน</div><div class="card-val" id="ov-rain">--</div><div class="card-sub" style="color:var(--muted);font-size:11px">โอกาส %</div></div>
-    </div>
-
-    <div class="card">
-      <div class="chart-title">PM2.5 + UV Index (24 ชม.)</div>
       <div class="legend">
-        <div class="legend-item"><span class="legend-dot" style="background:#f87171"></span>PM2.5</div>
-        <div class="legend-item"><span class="legend-dot" style="background:#fbbf24;border-top:2px dashed #fbbf24;height:0"></span>UV Index</div>
+        <div class="legend-item"><div class="legend-line" style="background:#22d3a0"></div>PM2.5 µg/m³ (left)</div>
+        <div class="legend-item"><div class="legend-dash" style="border-color:#f0b429"></div>AQI-US (right)</div>
+        <div class="legend-item"><div class="legend-dash" style="border-color:#ef4444;border-style:dotted"></div>WHO 15 µg/m³</div>
       </div>
-      <div class="chart-wrap" style="height:200px"><canvas id="chart-ov" role="img" aria-label="PM2.5 and UV Index over 24 hours">PM2.5 and UV Index trend over the last 24 hours.</canvas></div>
+    </div>
+    <div class="chart-wrap" style="height:220px"><canvas id="chart-ov-main"></canvas></div>
+  </div>
+
+
+  <div class="flex-row" style="font-size:11px;color:var(--muted);gap:14px">
+    <span class="pill pill-p">PRIMARY</span> Indoor IoT Sensor (1-min cadence) &nbsp;·&nbsp;
+    <span class="pill pill-s">SECONDARY</span> IQAir (AQI, temp, humidity) + OpenAQ (PM2.5) + UV API &nbsp;·&nbsp;
+    <span class="pill pill-d">DERIVED</span> Running Score
+  </div>
+</div>
+
+
+
+<div id="tab-sensor" class="section">
+
+  <div class="callout callout-blue">
+    <div class="callout-title">🏠 PRIMARY SOURCE — Indoor IoT Sensor (1-minute resolution)</div>
+    This sensor is installed <strong>indoors</strong> and is the <strong>primary data source</strong> (highest temporal resolution).
+    Role in this system: <strong>(1)</strong> establish an indoor air quality baseline for the location,
+    <strong>(2)</strong> detect rising PM2.5 trends before hourly outdoor data updates,
+    <strong>(3)</strong> compute variability (CV%) to assess measurement confidence,
+    <strong>(4)</strong> provide indoor context for interpretation of outdoor conditions.<br>
+    Indoor PM2.5 is <em>NOT</em> used to estimate outdoor PM2.5 — real outdoor data comes from OpenAQ.
+  </div>
+
+
+  <div class="gauto mb14">
+    <div class="card card-sm"><div class="card-label"><span class="pill pill-p">P</span> PM1.0</div><div class="card-val" id="s-pm1">--</div><div class="card-sub">µg/m³</div></div>
+    <div class="card card-sm" style="border-color:rgba(34,211,160,.2)">
+      <div class="card-label"><span class="pill pill-p">P</span> PM2.5 ← baseline</div>
+      <div class="card-val" id="s-pm25">--</div>
+      <div class="card-sub"><span class="badge badge-ok" id="s-pm25-b">--</span> µg/m³</div>
+    </div>
+    <div class="card card-sm"><div class="card-label"><span class="pill pill-p">P</span> PM10</div><div class="card-val" id="s-pm10">--</div><div class="card-sub">µg/m³</div></div>
+    <div class="card card-sm"><div class="card-label"><span class="pill pill-p">P</span> Light (raw)</div><div class="card-val" id="s-raw">--</div><div class="card-sub">ADC 0–4095</div></div>
+    <div class="card card-sm"><div class="card-label"><span class="pill pill-p">P</span> Brightness</div><div class="card-val" id="s-pct">--%</div><div class="card-sub">KY-018 (inverted)</div></div>
+  </div>
+
+
+  <div class="g2 mb14">
+    <div class="card" style="border-color:rgba(56,189,248,.15)">
+      <div class="card-label"><span class="pill pill-d">D</span> PM2.5 Trend Analysis</div>
+      <div style="font-size:22px;font-weight:700;font-family:var(--mono);margin:6px 0" id="s-trend">--</div>
+      <div style="font-size:11px;color:var(--muted);font-family:var(--mono)" id="s-trend-detail">Comparing last 10 vs previous 10 minutes</div>
+      <div style="font-size:10px;color:var(--dim);font-family:var(--mono);margin-top:6px">
+        ↑ Rising = outdoor PM likely worsening · ↓ Falling = improving · → Stable = consistent
+      </div>
+    </div>
+    <div class="card" style="border-color:rgba(168,85,247,.15)">
+      <div class="card-label"><span class="pill pill-d">D</span> Coefficient of Variation (CV%)</div>
+      <div style="font-size:22px;font-weight:700;font-family:var(--mono);margin:6px 0" id="s-cv">--%</div>
+      <div style="font-size:11px;color:var(--muted);font-family:var(--mono)" id="s-cv-label">Measurement stability (24h)</div>
+      <div style="font-size:10px;color:var(--dim);font-family:var(--mono);margin-top:6px">
+        CV &lt;15% = stable · 15–35% = variable · &gt;35% = high variability
+      </div>
     </div>
   </div>
 
-  <!-- ── SENSOR ─────────────────────────────────────── -->
-  <div id="tab-sensor" class="section">
-    <div class="grid-metrics">
-      <div class="card"><div class="card-label">PM1.0</div><div class="card-val" id="s-pm1">--</div><div class="card-sub" style="color:var(--muted);font-size:11px">µg/m³</div></div>
-      <div class="card"><div class="card-label">PM2.5</div><div class="card-val" id="s-pm25">--</div><div class="card-sub"><span class="badge badge-ok" id="s-pm25-b">--</span></div></div>
-      <div class="card"><div class="card-label">PM10</div><div class="card-val" id="s-pm10">--</div><div class="card-sub" style="color:var(--muted);font-size:11px">µg/m³</div></div>
-      <div class="card"><div class="card-label">แสง (raw)</div><div class="card-val" id="s-raw">--</div><div class="card-sub" style="color:var(--muted);font-size:11px">0–4095</div></div>
-      <div class="card"><div class="card-label">แสง</div><div class="card-val" id="s-pct">--%</div><div class="card-sub" style="color:var(--muted);font-size:11px">KY-018</div></div>
-    </div>
 
-    <div class="card" style="margin-bottom:14px">
-      <div class="chart-title">PM Trend (24 ชม.)</div>
+  <div class="chart-card mb14">
+    <div class="chart-header">
+      <div class="chart-title">PM Trend — 24h Raw 1-Minute Data</div>
       <div class="legend">
-        <div class="legend-item"><span class="legend-dot" style="background:#60a5fa"></span>PM1.0</div>
-        <div class="legend-item"><span class="legend-dot" style="background:#f87171"></span>PM2.5</div>
-        <div class="legend-item"><span class="legend-dot" style="background:#fbbf24"></span>PM10</div>
+        <div class="legend-item"><div class="legend-line" style="background:#38bdf8"></div>PM1.0</div>
+        <div class="legend-item"><div class="legend-line" style="background:#22d3a0"></div>PM2.5</div>
+        <div class="legend-item"><div class="legend-dash" style="border-color:#f0b429"></div>PM10</div>
       </div>
-      <div class="chart-wrap" style="height:200px"><canvas id="chart-pm" role="img" aria-label="PM dust levels over 24 hours">PM1.0, PM2.5, and PM10 over the last 24 hours.</canvas></div>
     </div>
+    <div class="chart-wrap" style="height:200px"><canvas id="chart-pm"></canvas></div>
+    <div class="chart-note">ℹ️ Raw 1-minute readings. Used for trend detection and CV analysis. NOT used to estimate outdoor PM2.5.</div>
+  </div>
 
-    <div class="card">
-      <div class="chart-title">ระดับแสง (24 ชม.)</div>
-      <div class="chart-wrap" style="height:140px"><canvas id="chart-light" role="img" aria-label="Light level over 24 hours">Light level percentage over the last 24 hours.</canvas></div>
+
+  <div class="chart-card">
+    <div class="chart-header"><div class="chart-title">Indoor Light Level — 24h</div><span class="pill pill-p">KY-018</span></div>
+    <div class="chart-wrap" style="height:120px"><canvas id="chart-light"></canvas></div>
+  </div>
+</div>
+
+
+
+<div id="tab-outdoor" class="section">
+
+  <div class="callout callout-orange">
+    <div class="callout-title">🌤 SECONDARY SOURCES — Outdoor Environmental APIs</div>
+    <strong>IQAir:</strong> AQI-US (US EPA NowCast method), temperature °C, humidity % &nbsp;·&nbsp;
+    <strong>OpenAQ:</strong> PM2.5 µg/m³ (latest + 24h avg, sensor 2076226) &nbsp;·&nbsp;
+    <strong>UV API:</strong> UV Index (currentuvindex.com) &nbsp;·&nbsp;
+    <strong>OWM:</strong> Wind speed, rain probability &nbsp;·&nbsp;
+    <span id="weather-api-pm-note"></span>
+  </div>
+
+
+  <div class="gauto mb14">
+    <div class="card card-sm" id="ow-aqi-card">
+      <div class="card-label"><span class="pill pill-s">S</span> AQI-US · IQAir</div>
+      <div class="card-val" id="ow-aqi">--</div>
+      <div class="card-sub" id="ow-aqi-cat">--</div>
+    </div>
+    <div class="card card-sm">
+      <div class="card-label"><span class="pill pill-s">S</span> PM2.5 · OpenAQ</div>
+      <div class="card-val" id="ow-pm25-lat">--</div>
+      <div class="card-sub">µg/m³ latest hourly</div>
+    </div>
+    <div class="card card-sm">
+      <div class="card-label"><span class="pill pill-s">S</span> PM2.5 Avg 24h · OpenAQ</div>
+      <div class="card-val" id="ow-pm25-avg">--</div>
+      <div class="card-sub">µg/m³ rolling average</div>
+    </div>
+    <div class="card card-sm">
+      <div class="card-label"><span class="pill pill-s">S</span> Temperature · IQAir</div>
+      <div class="card-val" id="ow-temp">--°C</div>
+      <div class="card-sub"><span class="badge badge-ok" id="ow-temp-b">--</span></div>
+    </div>
+    <div class="card card-sm">
+      <div class="card-label"><span class="pill pill-s">S</span> Humidity · IQAir</div>
+      <div class="card-val" id="ow-hum">--%</div>
+    </div>
+    <div class="card card-sm">
+      <div class="card-label"><span class="pill pill-s">S</span> UV Index</div>
+      <div class="card-val" id="ow-uv">--</div>
+      <div class="card-sub"><span class="badge badge-ok" id="ow-uv-b">--</span></div>
+    </div>
+    <div class="card card-sm">
+      <div class="card-label"><span class="pill pill-s">S</span> Wind · OWM</div>
+      <div class="card-val" id="ow-wind">-- m/s</div>
+    </div>
+    <div class="card card-sm">
+      <div class="card-label"><span class="pill pill-s">S</span> Rain · OWM</div>
+      <div class="card-val" id="ow-rain">--%</div>
     </div>
   </div>
 
-  <!-- ── WEATHER ────────────────────────────────────── -->
-  <div id="tab-weather" class="section">
-    <div class="grid-metrics">
-      <div class="card"><div class="card-label">อุณหภูมิ</div><div class="card-val" id="w-temp">--°C</div></div>
-      <div class="card"><div class="card-label">ความชื้น</div><div class="card-val" id="w-hum">--%</div></div>
-      <div class="card"><div class="card-label">ลม</div><div class="card-val" id="w-wind">-- m/s</div></div>
-      <div class="card"><div class="card-label">UV Index</div><div class="card-val" id="w-uv">--</div></div>
-      <div class="card"><div class="card-label">ฝน</div><div class="card-val" id="w-rain">--%</div></div>
-    </div>
 
-    <div class="card" style="margin-bottom:14px">
-      <div class="chart-title">อุณหภูมิ + ความชื้น (24 ชม.)</div>
+  <div class="chart-card mb14">
+    <div class="chart-header">
+      <div class="chart-title">PM2.5 (OpenAQ) — 24h Hourly</div>
       <div class="legend">
-        <div class="legend-item"><span class="legend-dot" style="background:#f87171"></span>อุณหภูมิ °C</div>
-        <div class="legend-item"><span class="legend-dot" style="background:#60a5fa"></span>ความชื้น %</div>
+        <div class="legend-item"><div class="legend-line" style="background:#22d3a0"></div>PM2.5 latest</div>
+        <div class="legend-item"><div class="legend-dash" style="border-color:#f0b429"></div>24h avg</div>
       </div>
-      <div class="chart-wrap" style="height:200px"><canvas id="chart-wth" role="img" aria-label="Temperature and humidity over 24 hours">Temperature and humidity over the last 24 hours.</canvas></div>
     </div>
+    <div class="chart-wrap" style="height:180px"><canvas id="chart-wpm"></canvas></div>
+    <div class="chart-note">Source: OpenAQ v3 sensor 2076226 · Real µg/m³ measurements · No estimation</div>
+  </div>
 
-    <div class="card">
-      <div class="chart-title">UV Index (24 ชม.)</div>
-      <div class="chart-wrap" style="height:140px"><canvas id="chart-wuv" role="img" aria-label="UV Index over 24 hours">UV Index over the last 24 hours.</canvas></div>
+  <div class="g2 mb14">
+    <div class="chart-card">
+      <div class="chart-header"><div class="chart-title">Temperature + Humidity — 24h</div></div>
+      <div class="legend mb12">
+        <div class="legend-item"><div class="legend-line" style="background:#ef4444"></div>Temp °C</div>
+        <div class="legend-item"><div class="legend-dash" style="border-color:#38bdf8"></div>Humidity %</div>
+      </div>
+      <div class="chart-wrap" style="height:160px"><canvas id="chart-wth"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header"><div class="chart-title">UV Index + AQI — 24h</div></div>
+      <div class="legend mb12">
+        <div class="legend-item"><div class="legend-line" style="background:#f0b429"></div>UV Index (left)</div>
+        <div class="legend-item"><div class="legend-dash" style="border-color:#a855f7"></div>AQI-US (right)</div>
+      </div>
+      <div class="chart-wrap" style="height:160px"><canvas id="chart-wuv"></canvas></div>
+    </div>
+  </div>
+</div>
+
+
+
+<div id="tab-integrate" class="section">
+
+  <div class="callout callout-purple">
+    <div class="callout-title">🔗 Data Integration Architecture</div>
+    <strong>Primary:</strong> Indoor IoT sensor → provides baseline + trend + variability (1-min resolution)<br>
+    <strong>Secondary:</strong> IQAir → AQI + temp + humidity &nbsp;|&nbsp; OpenAQ → real PM2.5 (hourly) &nbsp;|&nbsp; OWM → wind + rain &nbsp;|&nbsp; UV API → UV index<br>
+    <strong>Integration:</strong> Sensor data aggregated to hourly → joined with weather_data by hour key → Running Score derived
+  </div>
+
+
+  <div class="card mb14">
+    <div class="card-label mb12">Data Pipeline — Sequential flow (no race conditions)</div>
+    <div class="pipeline">
+      <div class="pipe-node"><h4 style="color:var(--blue)">① PRIMARY</h4><p>IoT Sensor<br>PM1/2.5/10 · Light<br>1-minute cadence</p></div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-node"><h4 style="color:var(--purple)">② AGGREGATE</h4><p>1-min → hourly avg<br>CV% + trend<br>Group by hour key</p></div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-node"><h4 style="color:var(--orange)">③ SECONDARY</h4><p>IQAir + OpenAQ<br>+ UV + OWM<br>1-hour cadence</p></div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-node"><h4 style="color:var(--yellow)">④ ALIGN</h4><p>Join on<br>YYYY-MM-DD HH<br>hour key</p></div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-node"><h4 style="color:var(--green)">⑤ SCORE</h4><p>6-factor formula<br>Standard-based<br>0–100 pts</p></div>
     </div>
   </div>
 
-  <!-- ── FORECAST ───────────────────────────────────── -->
-  <div id="tab-forecast" class="section">
-    <div class="card" style="margin-bottom:14px">
-      <div class="chart-title">พยากรณ์อุณหภูมิ 5 วัน</div>
-      <div class="chart-wrap" style="height:200px"><canvas id="chart-fc-t" role="img" aria-label="5-day temperature forecast">5-day temperature forecast.</canvas></div>
-    </div>
-    <div class="grid-2">
-      <div class="card">
-        <div class="chart-title">UV Index (พยากรณ์)</div>
-        <div class="chart-wrap" style="height:150px"><canvas id="chart-fc-uv" role="img" aria-label="UV Index forecast">UV Index forecast.</canvas></div>
-      </div>
-      <div class="card">
-        <div class="chart-title">โอกาสฝน % (พยากรณ์)</div>
-        <div class="chart-wrap" style="height:150px"><canvas id="chart-fc-r" role="img" aria-label="Rain probability forecast">Rain probability forecast.</canvas></div>
-      </div>
-    </div>
 
-    <div class="card" style="margin-top:14px;overflow-x:auto">
-      <div class="chart-title" style="margin-bottom:10px">ตารางพยากรณ์</div>
-      <table class="tbl" id="fc-table">
-        <thead><tr><th>เวลา</th><th>อุณหภูมิ</th><th>ความชื้น</th><th>ฝน %</th><th>UV</th></tr></thead>
-        <tbody id="fc-tbody"><tr><td colspan="5" style="color:var(--muted);text-align:center">รอข้อมูล...</td></tr></tbody>
+  <div class="card mb14">
+    <div class="card-label mb12">Hourly-Aligned Data Table — Last 24 Hours</div>
+    <div class="align-table-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Hour</th>
+            <th>Indoor PM2.5 <span class="pill pill-p">P</span></th>
+            <th>Outdoor PM2.5 <span class="pill pill-s">S</span></th>
+            <th>AQI-US <span class="pill pill-s">S</span></th>
+            <th>ΔPM (Out−In)</th>
+            <th>Temp °C</th>
+            <th>UV</th>
+            <th>Score <span class="pill pill-d">D</span></th>
+          </tr>
+        </thead>
+        <tbody id="align-tbody">
+          <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Load data to see alignment table</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="chart-note">ΔPM = Outdoor PM2.5 (OpenAQ real) − Indoor PM2.5 (hourly avg). Positive = outdoor worse. Negative = indoor source.</div>
+  </div>
+
+
+  <div class="chart-card mb14">
+    <div class="chart-header">
+      <div class="chart-title">Indoor PM2.5 (baseline) vs Outdoor PM2.5 (OpenAQ real) — Hourly Aligned</div>
+      <span class="pill pill-d">Integration</span>
+    </div>
+    <div class="legend mb12">
+      <div class="legend-item"><div class="legend-line" style="background:#38bdf8"></div>Indoor PM2.5 [hourly avg] (Primary)</div>
+      <div class="legend-item"><div class="legend-line" style="background:#22d3a0"></div>Outdoor PM2.5 [OpenAQ real] (Secondary)</div>
+      <div class="legend-item"><div class="legend-dash" style="border-color:#a855f7"></div>ΔPM (Derived)</div>
+    </div>
+    <div class="chart-wrap" style="height:220px"><canvas id="chart-int"></canvas></div>
+    <div class="chart-note">⚡ Sensor data aggregated from 1-min → hourly before comparison. Only hours present in both datasets plotted.</div>
+  </div>
+
+
+  <div class="card mb14">
+    <div class="card-label mb12">Source Comparison — What Each API Provides</div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Parameter</th>
+            <th>🏠 Indoor Sensor <span class="pill pill-p">P</span></th>
+            <th>🌤 Weather APIs <span class="pill pill-s">S</span></th>
+            <th>Role in Running Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>PM2.5 µg/m³</td>
+            <td><strong id="cmp-pm-in">--</strong> µg/m³ · direct</td>
+            <td><strong id="cmp-pm-out">--</strong> µg/m³ · OpenAQ real</td>
+            <td style="font-size:10px;color:var(--yellow)">Support factor (−0 to −10 pts based on EPA tiers)</td>
+          </tr>
+          <tr>
+            <td>AQI-US</td>
+            <td style="color:var(--dim)">Not measured</td>
+            <td><strong id="cmp-aqi">--</strong> · IQAir NowCast</td>
+            <td style="font-size:10px;color:var(--orange)"><strong>Primary factor</strong> — −0 to −45 pts (EPA AQI categories)</td>
+          </tr>
+          <tr>
+            <td>Temperature</td>
+            <td style="color:var(--dim)">Not measured</td>
+            <td><strong id="cmp-temp">--</strong> °C · IQAir</td>
+            <td style="font-size:10px;color:var(--red)">Tropical-adapted (penalty ≥30°C) · −0 to −20 pts</td>
+          </tr>
+          <tr>
+            <td>Humidity</td>
+            <td style="color:var(--dim)">Not measured</td>
+            <td><strong id="cmp-hum">--</strong> % · IQAir</td>
+            <td style="font-size:10px;color:var(--blue)">Heat stress (Steadman HI) only when T≥28°C · −0 to −8 pts</td>
+          </tr>
+          <tr>
+            <td>UV Index</td>
+            <td style="color:var(--dim)">N/A</td>
+            <td><strong id="cmp-uv">--</strong> · UV API</td>
+            <td style="font-size:10px;color:var(--yellow)">WHO categories · −0 to −15 pts</td>
+          </tr>
+          <tr>
+            <td>Rain</td>
+            <td style="color:var(--dim)">N/A</td>
+            <td><strong id="cmp-rain">--</strong> % · OWM</td>
+            <td style="font-size:10px;color:var(--blue)">User-toggleable · −0 to −15 pts</td>
+          </tr>
+          <tr>
+            <td>Light Level</td>
+            <td><strong id="cmp-light">--</strong> · KY-018</td>
+            <td style="color:var(--dim)">Not in API</td>
+            <td style="font-size:10px;color:var(--muted)">Reference context (day/night) · not in score</td>
+          </tr>
+        </tbody>
       </table>
     </div>
   </div>
 
+
+  <div class="card">
+    <div class="card-label mb14">📋 Running Score Formula — Full Specification (Standard-Based)</div>
+    <div class="g2" style="gap:14px">
+      <div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;font-family:var(--mono)">Formula (exact code match)</div>
+        <div class="code-box">
+<span class="c-mut">// Base = 100 · Score = max(0, 100 − Σ penalties)</span><br><br>
+<span class="c-mut">// ① AQI-US (IQAir · US EPA AQI · max −45)</span><br>
+AQI   0–50  → <span class="c-g">−0</span>  <span class="c-mut">// Good</span><br>
+AQI  51–100 → <span class="c-y">−10</span> <span class="c-mut">// Moderate</span><br>
+AQI 101–150 → <span class="c-o">−20</span> <span class="c-mut">// Unhealthy·Sensitive</span><br>
+AQI 151–200 → <span class="c-r">−35</span> <span class="c-mut">// Unhealthy</span><br>
+AQI  &gt;200   → <span class="c-r">−45</span> <span class="c-mut">// Very Unhealthy/Hazardous</span><br><br>
+<span class="c-mut">// ② PM2.5 support (OpenAQ · EPA tiers · max −10)</span><br>
+PM  ≤12.0  → <span class="c-g">−0</span>  <span class="c-mut">// Good</span><br>
+PM 12.1–35.4→ <span class="c-y">−3</span>  <span class="c-mut">// Moderate</span><br>
+PM 35.5–55.4→ <span class="c-o">−6</span>  <span class="c-mut">// Unhealthy·Sensitive</span><br>
+PM  &gt;55.4   → <span class="c-r">−10</span> <span class="c-mut">// Unhealthy</span><br>
+<span class="c-dim">// AQI+PM capped at 50 pts total</span><br><br>
+<span class="c-mut">// ③ Temperature (ACSM tropical · max −20)</span><br>
+T  &lt;30°C  → <span class="c-g">−0</span>  <span class="c-mut">// Ideal</span><br>
+T 30–33°C → <span class="c-y">−5</span>  <span class="c-mut">// Warm — hydrate</span><br>
+T 34–36°C → <span class="c-o">−10</span> <span class="c-mut">// Hot — Bangkok avg</span><br>
+T 37–39°C → <span class="c-r">−15</span> <span class="c-mut">// Very Hot</span><br>
+T  ≥40°C  → <span class="c-r">−20</span> <span class="c-mut">// Extreme</span><br><br>
+<span class="c-mut">// ④ Heat Stress (Steadman 1979 · max −8)</span><br>
+<span class="c-dim">// Penalty ONLY when temp is also elevated</span><br>
+H≥85% &amp;&amp; T≥30 → <span class="c-r">−8</span><br>
+H≥80% &amp;&amp; T≥30 → <span class="c-o">−5</span><br>
+H≥75% &amp;&amp; T≥28 → <span class="c-y">−3</span><br>
+else          → <span class="c-g">−0</span> <span class="c-mut">// no effect without heat</span><br><br>
+<span class="c-mut">// ⑤ UV Index (WHO standard · max −15)</span><br>
+UV  0–2  → <span class="c-g">−0</span>  <span class="c-mut">// Low</span><br>
+UV  3–5  → <span class="c-y">−5</span>  <span class="c-mut">// Moderate</span><br>
+UV  6–7  → <span class="c-o">−10</span> <span class="c-mut">// High</span><br>
+UV  8–10 → <span class="c-r">−13</span> <span class="c-mut">// Very High</span><br>
+UV ≥11   → <span class="c-r">−15</span> <span class="c-mut">// Extreme</span><br><br>
+<span class="c-mut">// ⑥ Rain probability (OWM · toggleable · max −15)</span><br>
+Rain &lt;20% → <span class="c-g">−0</span><br>
+Rain 20–49% → <span class="c-y">−5</span><br>
+Rain 50–69% → <span class="c-o">−10</span><br>
+Rain ≥70% → <span class="c-r">−15</span><br><br>
+Score = <span class="c-g">max(0, 100 − Σ penalties)</span>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;font-family:var(--mono)">Standards &amp; Justification</div>
+        <div class="code-box" style="line-height:1.9">
+<span class="c-mut">// AQI source standard</span><br>
+US EPA AQI Technical Assistance<br>
+Document (2024) · NowCast method<br>
+AQI ≠ PM2.5 — different metrics<br><br>
+<span class="c-mut">// PM2.5 standard</span><br>
+US EPA breakpoints (µg/m³):<br>
+Good &lt;12 · Moderate 12–35<br>
+USG 35–55 · Unhealthy &gt;55<br>
+WHO guideline: 15 µg/m³ (24h)<br><br>
+<span class="c-mut">// Temperature standard</span><br>
+ACSM Position Stand: Exertional<br>
+Heat Illness (2007)<br>
+Adapted for Bangkok (avg 30–35°C)<br>
+Penalty starts 30°C not 35°C<br><br>
+<span class="c-mut">// Heat stress standard</span><br>
+Steadman (1979) Heat Index:<br>
+at 32°C + 80% RH →<br>
+apparent temp = 39°C (danger)<br>
+Source: ACSM Heat Illness 2007<br><br>
+<span class="c-mut">// UV standard</span><br>
+WHO Global Solar UV Index:<br>
+A Practical Guide (2002)<br><br>
+<span class="c-mut">// Score thresholds</span><br>
+80–100 → <span class="c-g">Excellent · Safe</span><br>
+60–79  → <span class="c-g">Good · Precautions</span><br>
+40–59  → <span class="c-y">Moderate · Shorten run</span><br>
+20–39  → <span class="c-r">Poor · Avoid strenuous</span><br>
+ 0–19  → <span class="c-r">Hazardous · Do not run</span>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
-<script>
-// ── Config ─────────────────────────────────────────────────
-function base(){
-  const host   = document.getElementById('api-host').value.replace(/\/$/,'');
-  const prefix = document.getElementById('api-prefix').value.replace(/\/$/,'');
-  return host + prefix;
-}
 
-// ── Chart defaults ─────────────────────────────────────────
-const CO = {
-  responsive: true, maintainAspectRatio: false,
-  plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false,
-    callbacks: { label: ctx => ' '+ctx.dataset.label+': '+ctx.parsed.y } } },
-  scales: {
-    x: { ticks: { maxTicksLimit: 6, color: '#6b7280', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,.04)' }, border: { color: 'rgba(255,255,255,.07)' } },
-    y: { ticks: { color: '#6b7280', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,.04)' }, border: { color: 'rgba(255,255,255,.07)' } }
-  }
+
+<div id="tab-forecast" class="section">
+
+  <div class="callout callout-yellow">
+    <div class="callout-title">📅 5-Day Weather Forecast <span class="pill pill-s">SECONDARY · OWM</span></div>
+    Use this to plan running sessions in advance. Temperature and rain probability from OWM 3h slots · UV from UV API.
+    Estimated score shown per slot using the same formula (rain toggle applied).
+  </div>
+
+  <div class="chart-card mb14">
+    <div class="chart-header"><div class="chart-title">Temperature Forecast — 5 Days</div><span class="pill pill-s">OWM · 3h slots</span></div>
+    <div class="chart-wrap" style="height:190px"><canvas id="chart-fc-t"></canvas></div>
+  </div>
+
+  <div class="g2 mb14">
+    <div class="chart-card">
+      <div class="chart-header"><div class="chart-title">UV Index (Forecast)</div></div>
+      <div class="chart-wrap" style="height:150px"><canvas id="chart-fc-uv"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header"><div class="chart-title">Rain Probability % (Forecast)</div></div>
+      <div class="chart-wrap" style="height:150px"><canvas id="chart-fc-r"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card" style="overflow-x:auto">
+    <div class="card-label mb12">Forecast Table — with Estimated Running Score</div>
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Time</th><th>Temp °C</th><th>Humidity %</th><th>Rain %</th><th>UV</th><th>Est. Score <span class="pill pill-d">D</span></th>
+        </tr>
+      </thead>
+      <tbody id="fc-tbody">
+        <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">No forecast data loaded</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</div>
+
+
+<script>
+'use strict';
+
+
+const G = {
+  sensor:       null,  // latest sensor reading
+  sensorHist:   [],    // 1-min history (24h)
+  sensorHourly: [],    // hourly aggregated sensor
+  weather:      null,  // latest weather row
+  weatherHist:  [],    // hourly weather history
+  forecast:     [],    // forecast rows
+  aligned:      [],    // joined hourly pairs
+  includeRain:  true,
+  autoTimer:    null,
+  lastOk:       null
 };
 
-function mkDs(label, data, color, dash){
-  return { label, data, borderColor: color, backgroundColor: 'transparent',
-    borderWidth: 1.5, borderDash: dash||[], pointRadius: 0, tension: 0.35 };
-}
+
+const base = () => {
+  const h = document.getElementById('api-host').value.replace(/\/+$/,'');
+  const p = document.getElementById('api-prefix').value.replace(/\/+$/,'');
+  return h + p;
+};
 
 const charts = {};
-function mkChart(id, labels, datasets, extra){
-  if(charts[id]) charts[id].destroy();
-  charts[id] = new Chart(document.getElementById(id), {
-    type: 'line',
-    data: { labels, datasets },
-    options: Object.assign({}, CO, extra||{})
-  });
+const SX = {
+  x: { ticks:{ maxTicksLimit:6, color:'#3a4858', font:{size:10} },
+       grid:{ color:'rgba(255,255,255,.04)' }, border:{ color:'rgba(255,255,255,.06)' } },
+  y: { ticks:{ color:'#3a4858', font:{size:10} },
+       grid:{ color:'rgba(255,255,255,.04)' }, border:{ color:'rgba(255,255,255,.06)' } }
+};
+const CO = {
+  responsive:true, maintainAspectRatio:false,
+  plugins:{ legend:{ display:false },
+    tooltip:{ mode:'index', intersect:false,
+      callbacks:{ label: ctx => ' ' + ctx.dataset.label + ': ' + (ctx.parsed.y ?? '--') } } },
+  scales: SX
+};
+
+function mkDs(label, data, color, dash=[], fill=false, bg='transparent') {
+  return { label, data, borderColor:color, backgroundColor:bg, borderWidth:1.5,
+    borderDash:dash, pointRadius:0, tension:0.3, fill };
+}
+function mkChart(id, labels, datasets, extraOpts={}) {
+  const canvas = document.getElementById(id); if (!canvas) return;
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+  const opts = { ...CO, ...extraOpts };
+  if (!opts.scales) opts.scales = SX;
+  charts[id] = new Chart(canvas, { type:'line', data:{ labels, datasets }, options: opts });
 }
 
-// ── Helpers ────────────────────────────────────────────────
-function fmt(v, dec){ return v==null?'--':(+v).toFixed(dec??1); }
-function fmtTime(ts){ const d=new Date(ts); return (d.getMonth()+1)+'/'+(d.getDate())+' '+(d.getHours()+'').padStart(2,'0')+':'+(d.getMinutes()+'').padStart(2,'0'); }
 
-function setBadge(id, val, breaks, labels){
-  const el = document.getElementById(id); if(!el) return;
-  let cls = 'badge-ok', text = labels[0];
-  if(val >= breaks[1]){ cls='badge-bad'; text=labels[2]; }
-  else if(val >= breaks[0]){ cls='badge-warn'; text=labels[1]; }
-  el.className = 'badge '+cls; el.textContent = text;
+const fmt   = (v, d=1) => (v==null||!isFinite(v)) ? '--' : (+v).toFixed(d);
+const setText = (id, v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+const fmtTime = ts => {
+  const d=new Date(ts);
+  return (d.getMonth()+1)+'/'+d.getDate()+' '+
+    String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+};
+const fmtHour = ts => {
+  const d=new Date(ts);
+  return String(d.getHours()).padStart(2,'0')+':00';
+};
+const toHourKey = ts => {
+  const d=new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}`;
+};
+const arrAvg = arr => { const f=arr.filter(v=>v!=null&&isFinite(v)); return f.length ? f.reduce((a,b)=>a+b,0)/f.length : null; };
+
+function setBadge(id, val, breaks, labels) {
+  const el=document.getElementById(id); if(!el) return;
+  let cls='badge-ok', txt=labels[0];
+  if (val>=breaks[1]) { cls='badge-bad'; txt=labels[2]; }
+  else if (val>=breaks[0]) { cls='badge-warn'; txt=labels[1]; }
+  el.className='badge '+cls; el.textContent=txt;
+}
+function setStatus(state, msg) {
+  const dot=document.getElementById('status-dot');
+  dot.className='dot ' + (state==='ok'?'dot-ok':state==='loading'?'dot-load':'dot-err');
+  setText('status-msg', msg);
+}
+function setLoading(show, msg='Loading...', sub='') {
+  const el=document.getElementById('load-overlay');
+  if (show) {
+    el.classList.remove('hidden');
+    setText('load-text', msg);
+    setText('load-sub',  sub);
+    const urlEl = document.getElementById('load-url');
+    if (urlEl) urlEl.textContent = base() + '/api/sensor/latest';
+  } else el.classList.add('hidden');
 }
 
-// ── Status ─────────────────────────────────────────────────
-function setStatus(ok, msg){
-  document.getElementById('status-dot').className = ok ? 'dot-ok' : 'dot-err';
-  document.getElementById('status-msg').textContent = msg;
-}
 
-// ── Fetch ──────────────────────────────────────────────────
-async function apiFetch(path){
-  const r = await fetch(base()+path);
-  if(!r.ok) throw new Error(r.status);
-  const j = await r.json();
-  if(!j.ok) throw new Error(j.error);
+async function apiFetch(path) {
+  const url = base() + path;
+  let r;
+  try {
+    r = await fetch(url, { signal: AbortSignal.timeout(18000) });
+  } catch(e) {
+
+    const msg = e.name === 'TimeoutError'
+      ? `Timeout (18s) fetching ${path} — is Node-RED running at ${base()}?`
+      : `Network error: ${e.message} — check Host/Prefix or CORS`;
+    throw new Error(msg);
+  }
+  if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText} — ${path}`);
+
+
+  let j;
+  const text = await r.text();
+  if (!text || text.trim() === '') throw new Error(`Empty response from ${path}`);
+  try { j = JSON.parse(text); }
+  catch(e) {
+    // Server returned HTML (login page, 502 gateway, etc.)
+    const preview = text.slice(0,80).replace(/\n/g,' ');
+    throw new Error(`Non-JSON response from ${path}: "${preview}"`);
+  }
+
+  if (j.ok === false) throw new Error((j.error || 'API returned ok:false') + ` — ${path}`);
   return j.data;
 }
 
-// ── Score ──────────────────────────────────────────────────
-function calcScore(pm25, uv, rain, temp){
-  if(pm25==null && uv==null) return null;
-  let s = 100;
-  if(pm25!=null){ if(pm25>35.4) s-=40; else if(pm25>12) s-=20; }
-  if(uv!=null){   if(uv>6) s-=20; else if(uv>3) s-=10; }
-  if(rain!=null){ if(rain>50) s-=20; else if(rain>20) s-=10; }
-  if(temp!=null){ if(temp>38) s-=20; else if(temp>35) s-=10; }
-  return Math.max(0, s);
+
+function aggregateSensorHourly(records) {
+  if (!records?.length) return [];
+  const map = {};
+  records.forEach(r => {
+    const k = toHourKey(r.timestamp);
+    if (!map[k]) map[k] = { key:k, ts:r.timestamp, pm1:[],pm25:[],pm10:[],light:[] };
+    if (r.pm1_0     != null) map[k].pm1.push(r.pm1_0);
+    if (r.pm2_5     != null) map[k].pm25.push(r.pm2_5);
+    if (r.pm10      != null) map[k].pm10.push(r.pm10);
+    if (r.light_level!=null) map[k].light.push(r.light_level);
+  });
+  return Object.values(map).sort((a,b)=>new Date(a.ts)-new Date(b.ts)).map(b=>({
+    hour: b.key, timestamp: b.ts,
+    pm1_0: arrAvg(b.pm1), pm2_5: arrAvg(b.pm25),
+    pm10: arrAvg(b.pm10), light_level: arrAvg(b.light),
+    sampleCount: b.pm25.length
+  }));
 }
 
-// ── Load sensor ────────────────────────────────────────────
-async function loadSensor(){
-  const [latest, hist] = await Promise.all([
-    apiFetch('/api/sensor/latest'),
-    apiFetch('/api/sensor/history?hours=24')
+function alignDatasets() {
+  if (!G.sensorHourly.length || !G.weatherHist.length) { G.aligned=[]; return; }
+  const wMap={};
+  G.weatherHist.forEach(r => { wMap[toHourKey(r.timestamp)]=r; });
+  G.aligned = G.sensorHourly
+    .map(s => { const w=wMap[s.hour]; return w ? {hour:s.hour, ts:s.timestamp, sensor:s, weather:w} : null; })
+    .filter(Boolean);
+}
+
+
+function calcScore(aqi, pm25, temp, humidity, uv, rain, includeRain) {
+  if (aqi==null && pm25==null && temp==null) return null;
+  let s=100;
+  const bk={aqi:0,pm:0,temp:0,hum:0,uv:0,rain:0};
+
+  if (aqi!=null) {
+    if      (aqi>200)  { bk.aqi=45; s-=45; }
+    else if (aqi>150)  { bk.aqi=35; s-=35; }
+    else if (aqi>100)  { bk.aqi=20; s-=20; }
+    else if (aqi>50)   { bk.aqi=10; s-=10; }
+  }
+
+  if (pm25!=null) {
+    let pmPenalty=0;
+    if      (pm25>55.4) pmPenalty=10;
+    else if (pm25>35.4) pmPenalty=6;
+    else if (pm25>12.0) pmPenalty=3;
+
+    const combined = bk.aqi + pmPenalty;
+    if (combined>50) pmPenalty = Math.max(0, 50-bk.aqi);
+    bk.pm=pmPenalty; s-=pmPenalty;
+  }
+
+
+  if (temp!=null) {
+    if      (temp>=40) { bk.temp=20; s-=20; }
+    else if (temp>=37) { bk.temp=15; s-=15; }
+    else if (temp>=34) { bk.temp=10; s-=10; }
+    else if (temp>=30) { bk.temp=5;  s-=5;  }
+  }
+
+
+  if (humidity!=null && temp!=null) {
+    if      (humidity>=85 && temp>=30) { bk.hum=8; s-=8; }
+    else if (humidity>=80 && temp>=30) { bk.hum=5; s-=5; }
+    else if (humidity>=75 && temp>=28) { bk.hum=3; s-=3; }
+  }
+
+
+  if (uv!=null) {
+    if      (uv>=11) { bk.uv=15; s-=15; }
+    else if (uv>=8)  { bk.uv=13; s-=13; }
+    else if (uv>=6)  { bk.uv=10; s-=10; }
+    else if (uv>=3)  { bk.uv=5;  s-=5;  }
+  }
+
+  if (includeRain && rain!=null) {
+    if      (rain>=70) { bk.rain=15; s-=15; }
+    else if (rain>=50) { bk.rain=10; s-=10; }
+    else if (rain>=20) { bk.rain=5;  s-=5;  }
+  }
+
+  return { score:Math.max(0,s), bk };
+}
+
+function scoreColor(s) {
+  if (s>=80) return 'var(--score-excellent)';
+  if (s>=60) return 'var(--score-good)';
+  if (s>=40) return 'var(--score-moderate)';
+  if (s>=20) return 'var(--score-poor)';
+  return 'var(--score-hazardous)';
+}
+function scoreVerdict(s) {
+  if (s>=80) return ['✅ Excellent — Safe to run', 'var(--score-excellent)'];
+  if (s>=60) return ['🟡 Good — Standard precautions', 'var(--score-good)'];
+  if (s>=40) return ['⚠️ Moderate — Shorten run, hydrate well', 'var(--score-moderate)'];
+  if (s>=20) return ['🔴 Poor — Avoid strenuous activity', 'var(--score-poor)'];
+  return ['☠️ Hazardous — Do not run outdoors', 'var(--score-hazardous)'];
+}
+
+
+function aqiCategory(aqi) {
+  if (aqi==null) return { cat:'--', color:'var(--muted)', bg:'transparent' };
+  if (aqi<=50)  return { cat:'Good',                           color:'var(--aqi-good)',      bg:'rgba(34,211,160,.08)'   };
+  if (aqi<=100) return { cat:'Moderate',                       color:'var(--aqi-moderate)',   bg:'rgba(240,180,41,.08)'   };
+  if (aqi<=150) return { cat:'Unhealthy for Sensitive Groups', color:'var(--aqi-usg)',        bg:'rgba(249,115,22,.08)'   };
+  if (aqi<=200) return { cat:'Unhealthy',                      color:'var(--aqi-unhealthy)',  bg:'rgba(239,68,68,.08)'    };
+  if (aqi<=300) return { cat:'Very Unhealthy',                 color:'var(--aqi-vunhealthy)', bg:'rgba(168,85,247,.08)'   };
+  return         { cat:'Hazardous',                            color:'var(--aqi-hazardous)',  bg:'rgba(127,29,29,.15)'    };
+}
+
+function pmCategory(pm) {
+  if (pm==null) return { cat:'--', cls:'badge-null' };
+  if (pm<=12.0) return { cat:'Good',      cls:'badge-ok'   };
+  if (pm<=35.4) return { cat:'Moderate',  cls:'badge-warn' };
+  if (pm<=55.4) return { cat:'USG',       cls:'badge-bad'  };
+  return         { cat:'Unhealthy',       cls:'badge-bad'  };
+}
+
+function renderScore() {
+  const w = G.weather || {};
+  const aqi  = w.aqi_us          ?? null;
+  const pm25 = w.pm2_5           ?? null;
+  const temp = w.temperature     ?? null;
+  const hum  = w.humidity        ?? null;
+  const uv   = w.uv_index        ?? null;
+  const rain = w.rain_probability ?? null;
+
+  const result = calcScore(aqi, pm25, temp, hum, uv, rain, G.includeRain);
+  if (!result) return;
+  const { score, bk } = result;
+  const col = scoreColor(score);
+
+  setText('score-num', score);
+  document.getElementById('score-num').style.color = col;
+
+  const fill = document.getElementById('score-fill');
+  fill.style.width = score+'%';
+  fill.style.background = col;
+
+  const [vText, vCol] = scoreVerdict(score);
+  const vEl = document.getElementById('score-verdict');
+  vEl.textContent = vText; vEl.style.color = vCol;
+
+
+  const scoreExplain = document.getElementById('score-explain');
+  const mainFactor = aqi!=null ? `AQI ${aqi}` : pm25!=null ? `PM2.5 ${fmt(pm25)} µg/m³` : 'no air data';
+  scoreExplain.innerHTML = `<strong style="color:${col}">${score}/100</strong> — primary factor: ${mainFactor}` +
+    (temp!=null ? ` · temp ${fmt(temp)}°C` : '') +
+    (uv!=null   ? ` · UV ${fmt(uv,1)}`     : '');
+
+
+  function applyBk(barId, valId, penalty, maxP, color) {
+    const pct = maxP>0 ? (1-penalty/maxP)*100 : 100;
+    const barEl=document.getElementById(barId);
+    const valEl=document.getElementById(valId);
+    if (barEl) { barEl.style.width=Math.max(0,pct)+'%'; barEl.style.background=penalty>0?color:'var(--green)'; }
+    if (valEl) { valEl.textContent=penalty>0?'−'+penalty:'0'; valEl.style.color=penalty>0?color:'var(--green)'; }
+  }
+  applyBk('bk-aqi',  'bk-aqi-v',  bk.aqi,  45, 'var(--orange)');
+  applyBk('bk-pm',   'bk-pm-v',   bk.pm,   10, 'var(--yellow)');
+  applyBk('bk-temp', 'bk-temp-v', bk.temp, 20, 'var(--red)');
+  applyBk('bk-hum',  'bk-hum-v',  bk.hum,  8,  'var(--blue)');
+  applyBk('bk-uv',   'bk-uv-v',   bk.uv,   15, 'var(--yellow)');
+  applyBk('bk-rain', 'bk-rain-v', bk.rain, 15, 'var(--blue)');
+
+
+  const rainLabel = document.getElementById('bk-rain-label');
+  if (rainLabel) {
+    if (!G.includeRain) rainLabel.innerHTML='<span class="pill pill-s">S</span>Rain <span style="color:var(--dim)">(off)</span>';
+    else rainLabel.innerHTML='<span class="pill pill-s">S</span>Rain';
+  }
+}
+
+
+function renderContextSentence() {
+  const w = G.weather || {};
+  const aqi  = w.aqi_us ?? null;
+  const pm25 = w.pm2_5  ?? null;
+  const temp = w.temperature ?? null;
+  const hum  = w.humidity   ?? null;
+  const uv   = w.uv_index   ?? null;
+  const rain = w.rain_probability ?? null;
+
+  const result = calcScore(aqi, pm25, temp, hum, uv, rain, G.includeRain);
+  if (!result) return;
+  const { score } = result;
+  const aqiA = aqi!=null ? aqiCategory(aqi) : null;
+
+  const qualityWord = score>=80?'<strong>EXCELLENT</strong>':score>=60?'<strong>GOOD</strong>':
+    score>=40?'<strong>MODERATE</strong>':score>=20?'<strong>POOR</strong>':'<strong>HAZARDOUS</strong>';
+  const aqiPart = aqiA ? ` Air quality is <strong>${aqiA.cat}</strong> (AQI ${aqi}).` : '';
+  const tempPart = temp>=34 ? ` Temperature is high at <strong>${fmt(temp)}°C</strong> — hydrate frequently.` : '';
+  const pmPart   = pm25>35.4 ? ` PM2.5 is elevated at <strong>${fmt(pm25)} µg/m³</strong> — sensitive groups should avoid outdoor activity.` : '';
+  const uvPart   = uv>=8 ? ` UV Index is <strong>Very High (${fmt(uv,1)})</strong> — sunscreen essential.` : '';
+  const rainPart = rain>=50 ? ` Rain probability is <strong>${fmt(rain,0)}%</strong>.` : '';
+
+  const el = document.getElementById('context-box');
+  const scoreColor = score>=80?'var(--green)':score>=60?'var(--score-good)':score>=40?'var(--yellow)':score>=20?'var(--orange)':'var(--red)';
+  el.innerHTML = `At this moment, running conditions at <strong>Chatuchak Park</strong> are ${qualityWord} 
+    <span style="color:${scoreColor};font-family:var(--mono)">(${score}/100)</span>.${aqiPart}${tempPart}${pmPart}${uvPart}${rainPart}`;
+}
+
+
+function renderOverviewChart() {
+  const hist = G.weatherHist;
+  if (!hist.length) return;
+  const labels = hist.map(r => fmtHour(r.timestamp));
+  const pm25d  = hist.map(r => r.pm2_5 != null ? +r.pm2_5.toFixed(1) : null);
+  const aqid   = hist.map(r => r.aqi_us != null ? r.aqi_us : null);
+  const whoRef = hist.map(() => 15);
+
+  const canvas = document.getElementById('chart-ov-main'); if(!canvas) return;
+  if (charts['chart-ov-main']) { charts['chart-ov-main'].destroy(); delete charts['chart-ov-main']; }
+
+  charts['chart-ov-main'] = new Chart(canvas, {
+    type:'line',
+    data:{ labels, datasets:[
+      { label:'PM2.5 µg/m³', data:pm25d, borderColor:'#22d3a0', backgroundColor:'rgba(34,211,160,.06)',
+        borderWidth:2, pointRadius:0, tension:0.3, fill:true, yAxisID:'y' },
+      { label:'WHO 15 µg/m³', data:whoRef, borderColor:'rgba(239,68,68,.4)',
+        borderWidth:1, borderDash:[3,3], pointRadius:0, tension:0, fill:false, yAxisID:'y' },
+      { label:'AQI-US', data:aqid, borderColor:'#f0b429', backgroundColor:'transparent',
+        borderWidth:1.5, borderDash:[5,3], pointRadius:0, tension:0.3, fill:false, yAxisID:'y1' }
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{mode:'index',intersect:false} },
+      scales:{
+        x:{ ...SX.x },
+        y:{ ...SX.y, position:'left',
+          title:{display:true,text:'PM2.5 µg/m³',color:'#22d3a0',font:{size:10}},
+          ticks:{...SX.y.ticks,color:'#22d3a0'} },
+        y1:{ ...SX.y, position:'right', grid:{drawOnChartArea:false},
+          title:{display:true,text:'AQI-US',color:'#f0b429',font:{size:10}},
+          ticks:{...SX.y.ticks,color:'#f0b429'} }
+      }
+    }
+  });
+}
+
+
+function renderAQICard() {
+  const aqi = G.weather?.aqi_us ?? null;
+  const info = aqiCategory(aqi);
+
+  setText('aqi-num', aqi ?? '--');
+  setText('aqi-cat', info.cat);
+  document.getElementById('aqi-num').style.color = info.color;
+  document.getElementById('aqi-cat').style.color = info.color;
+  const card = document.getElementById('aqi-card');
+  card.style.background = info.bg;
+  card.style.border = `1px solid ${info.color.replace(')',', .3)').replace('var(','rgba(')}`;
+
+  // Needle position (0–500 scale mapped to 0–100%)
+  const pct = aqi!=null ? Math.min(100, (aqi/160)*100) : 0;
+  const needle = document.getElementById('aqi-needle');
+  if (needle) needle.style.left = pct+'%';
+
+  // Also update overview AQI + outdoor tab
+  setText('ow-aqi', aqi ?? '--');
+  setText('ow-aqi-cat', info.cat);
+  if (document.getElementById('ow-aqi')) document.getElementById('ow-aqi').style.color = info.color;
+  if (document.getElementById('ow-aqi-card')) {
+    document.getElementById('ow-aqi-card').style.borderColor = info.color.replace('var(--aqi-','rgba(').replace(')',', .25)');
+  }
+}
+
+
+function renderPMCard() {
+  const pm    = G.weather?.pm2_5        ?? null;
+  const avg   = G.weather?.pm2_5_avg24h ?? null;
+  const info  = pmCategory(pm);
+
+  setText('pm-latest', pm!=null ? fmt(pm,1) : '--');
+  document.getElementById('pm-latest').style.color = pm!=null ?
+    (pm<=12?'var(--green)':pm<=35.4?'var(--yellow)':pm<=55.4?'var(--orange)':'var(--red)') : 'var(--muted)';
+
+  setText('pm-avg24h', avg!=null ? fmt(avg,1) : '--');
+  const badge = document.getElementById('pm-badge');
+  badge.className = 'badge '+info.cls; badge.textContent = info.cat;
+
+  // Trend: compare latest vs avg
+  const trend = document.getElementById('pm-trend');
+  if (pm!=null && avg!=null) {
+    const ratio = pm/avg;
+    if      (ratio>1.10) { trend.textContent='↑ Rising';  trend.style.background='rgba(239,68,68,.15)'; trend.style.color='var(--red)'; }
+    else if (ratio<0.90) { trend.textContent='↓ Falling'; trend.style.background='rgba(34,211,160,.1)'; trend.style.color='var(--green)'; }
+    else                 { trend.textContent='→ Stable';  trend.style.background='rgba(90,106,126,.12)'; trend.style.color='var(--muted)'; }
+  }
+
+  // Outdoor tab
+  setText('ow-pm25-lat', pm!=null ? fmt(pm,1) : '--');
+  setText('ow-pm25-avg', avg!=null ? fmt(avg,1) : '--');
+}
+
+
+function renderWeatherCards() {
+  const w = G.weather || {};
+  const temp = w.temperature     ?? null;
+  const hum  = w.humidity        ?? null;
+  const uv   = w.uv_index        ?? null;
+  const wind = w.wind_speed      ?? null;
+  const rain = w.rain_probability ?? null;
+
+  // Overview
+  setText('ov-temp', temp!=null ? fmt(temp,1)+'°C' : '--°C');
+  setText('ov-hum',  hum!=null  ? fmt(hum,0)+'%'   : '--%');
+  if (temp!=null) setBadge('ov-temp-b', temp, [33,38], ['Normal','Hot','Very Hot']);
+
+  // Heat stress display
+  const hs = document.getElementById('ov-heat-stress');
+  if (hs && hum!=null && temp!=null) {
+    if      (hum>=85&&temp>=30) { hs.textContent='⚠️ Severe';   hs.style.color='var(--red)'; }
+    else if (hum>=80&&temp>=30) { hs.textContent='High';        hs.style.color='var(--orange)'; }
+    else if (hum>=75&&temp>=28) { hs.textContent='Moderate';    hs.style.color='var(--yellow)'; }
+    else                        { hs.textContent='Low';         hs.style.color='var(--green)'; }
+  }
+
+  // Outdoor tab
+  setText('ow-temp', temp!=null ? fmt(temp,1)+'°C' : '--°C');
+  setText('ow-hum',  hum!=null  ? fmt(hum,0)+'%'  : '--%');
+  setText('ow-uv',   uv!=null   ? fmt(uv,1)        : '--');
+  setText('ow-wind', wind!=null ? fmt(wind,1)+' m/s':'-- m/s');
+  setText('ow-rain', rain!=null ? fmt(rain,0)+'%'  : '--%');
+  if (temp!=null) setBadge('ow-temp-b', temp, [33,38], ['Normal','Hot','Very Hot']);
+  if (uv!=null)   setBadge('ow-uv-b', uv, [3,6], ['Low','Moderate','High']);
+
+  // Integration tab comparison
+  const pm  = w.pm2_5 ?? null;
+  const aqi = w.aqi_us ?? null;
+  setText('cmp-aqi',  aqi!=null  ? aqi         : '--');
+  setText('cmp-pm-out', pm!=null ? fmt(pm,1)   : '--');
+  setText('cmp-temp', temp!=null ? fmt(temp,1) : '--');
+  setText('cmp-hum',  hum!=null  ? fmt(hum,0)  : '--');
+  setText('cmp-uv',   uv!=null   ? fmt(uv,1)   : '--');
+  setText('cmp-rain', rain!=null ? fmt(rain,0) : '--');
+}
+
+
+function renderOutdoorCharts() {
+  const h = G.weatherHist; if (!h.length) return;
+  const lbs = h.map(r => fmtHour(r.timestamp));
+
+  mkChart('chart-wpm', lbs, [
+    mkDs('PM2.5 latest',  h.map(r=>r.pm2_5), '#22d3a0', [], true, 'rgba(34,211,160,.06)'),
+    mkDs('PM2.5 avg 24h', h.map(r=>r.pm2_5_avg24h), '#f0b429', [4,3])
   ]);
 
-  if(latest){
+  mkChart('chart-wth', lbs, [
+    mkDs('Temp °C',    h.map(r=>r.temperature), '#ef4444'),
+    mkDs('Humidity %', h.map(r=>r.humidity),    '#38bdf8', [4,3])
+  ]);
+
+  // Dual axis: UV (left) + AQI (right)
+  const canvas = document.getElementById('chart-wuv'); if(!canvas) return;
+  if (charts['chart-wuv']) { charts['chart-wuv'].destroy(); delete charts['chart-wuv']; }
+  charts['chart-wuv'] = new Chart(canvas, {
+    type:'line',
+    data:{ labels:lbs, datasets:[
+      mkDs('UV Index', h.map(r=>r.uv_index), '#f0b429'),
+      { ...mkDs('AQI-US', h.map(r=>r.aqi_us), '#a855f7', [5,3]), yAxisID:'y1' }
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{mode:'index',intersect:false} },
+      scales:{
+        x:SX.x,
+        y:{ ...SX.y, ticks:{...SX.y.ticks,color:'#f0b429'} },
+        y1:{ ...SX.y, position:'right', grid:{drawOnChartArea:false}, ticks:{...SX.y.ticks,color:'#a855f7'} }
+      }
+    }
+  });
+}
+
+
+function renderSensorCharts() {
+  const h = G.sensorHist; if (!h.length) return;
+  const lbs = h.map(r => fmtTime(r.timestamp));
+
+  mkChart('chart-pm', lbs, [
+    mkDs('PM1.0', h.map(r=>r.pm1_0),  '#38bdf8'),
+    mkDs('PM2.5', h.map(r=>r.pm2_5),  '#22d3a0', [], true, 'rgba(34,211,160,.05)'),
+    mkDs('PM10',  h.map(r=>r.pm10),   '#f0b429', [4,3])
+  ]);
+
+  const lghtd = h.map(r => r.light_level!=null ? Math.round((1-r.light_level/4095)*100) : null);
+  mkChart('chart-light', lbs, [mkDs('Brightness %', lghtd, '#a855f7', [], true, 'rgba(168,85,247,.05)')]);
+
+
+  const latest = G.sensor;
+  if (latest) {
     const raw = latest.light_level;
     const pct = raw!=null ? Math.round((1-raw/4095)*100) : null;
-    document.getElementById('ov-pm25').textContent = fmt(latest.pm2_5,1);
-    document.getElementById('ov-pm10').textContent = fmt(latest.pm10,1);
-    document.getElementById('ov-light').textContent = pct!=null ? pct+'%' : '--';
-    document.getElementById('s-pm1').textContent = fmt(latest.pm1_0,1);
-    document.getElementById('s-pm25').textContent = fmt(latest.pm2_5,1);
-    document.getElementById('s-pm10').textContent = fmt(latest.pm10,1);
-    document.getElementById('s-raw').textContent = raw??'--';
-    document.getElementById('s-pct').textContent = pct!=null ? pct+'%' : '--%';
-    if(latest.pm2_5!=null) setBadge('ov-pm25-b', latest.pm2_5, [12,35.4], ['ดีมาก','ปานกลาง','แย่']);
-    if(latest.pm2_5!=null) setBadge('s-pm25-b',  latest.pm2_5, [12,35.4], ['ดีมาก','ปานกลาง','แย่']);
+    setText('s-pm1',  fmt(latest.pm1_0,1));
+    setText('s-pm25', fmt(latest.pm2_5,1));
+    setText('s-pm10', fmt(latest.pm10,1));
+    setText('s-raw',  raw ?? '--');
+    setText('s-pct',  pct!=null ? pct+'%' : '--%');
+    if (latest.pm2_5!=null) setBadge('s-pm25-b', latest.pm2_5, [12,35.4], ['Good','Moderate','Unhealthy']);
+
+    setText('cmp-pm-in', fmt(latest.pm2_5,1));
+    setText('cmp-light', pct!=null ? pct+'%' : '--');
   }
 
-  if(hist && hist.length){
-    const lbs = hist.map(r=>fmtTime(r.timestamp));
-    const pm1d = hist.map(r=>r.pm1_0), pm25d=hist.map(r=>r.pm2_5), pm10d=hist.map(r=>r.pm10);
-    const lghtd = hist.map(r=>r.light_level!=null ? Math.round((1-r.light_level/4095)*100) : null);
-
-    mkChart('chart-pm', lbs, [
-      mkDs('PM1.0',pm1d,'#60a5fa'), mkDs('PM2.5',pm25d,'#f87171'), mkDs('PM10',pm10d,'#fbbf24',[3,2])
-    ]);
-    mkChart('chart-light', lbs, [ mkDs('แสง',lghtd,'#4ade80') ]);
-    mkChart('chart-ov', lbs, [
-      mkDs('PM2.5',pm25d,'#f87171'), mkDs('UV Index',Array(lbs.length).fill(null),'#fbbf24',[4,3])
-    ]);
-  }
-}
-
-// ── Load weather ───────────────────────────────────────────
-async function loadWeather(){
-  const [latest, hist] = await Promise.all([
-    apiFetch('/api/weather/latest'),
-    apiFetch('/api/weather/history?hours=24')
-  ]);
-
-  if(latest){
-    document.getElementById('ov-temp').textContent = fmt(latest.temperature,1)+'°C';
-    document.getElementById('ov-uv').textContent   = fmt(latest.uv_index,1);
-    document.getElementById('ov-rain').textContent = fmt(latest.rain_probability,0)+'%';
-    document.getElementById('w-temp').textContent  = fmt(latest.temperature,1)+'°C';
-    document.getElementById('w-hum').textContent   = fmt(latest.humidity,0)+'%';
-    document.getElementById('w-wind').textContent  = fmt(latest.wind_speed,1)+' m/s';
-    document.getElementById('w-uv').textContent    = fmt(latest.uv_index,1);
-    document.getElementById('w-rain').textContent  = fmt(latest.rain_probability,0)+'%';
-
-    if(latest.temperature!=null) setBadge('ov-temp-b', latest.temperature, [35,38], ['ปกติ','ร้อน','ร้อนมาก']);
-    if(latest.uv_index!=null)    setBadge('ov-uv-b',   latest.uv_index,   [3,6],   ['ต่ำ','ปานกลาง','สูง']);
-
-    const score = calcScore(
-      parseFloat(document.getElementById('ov-pm25').textContent)||null,
-      latest.uv_index, latest.rain_probability, latest.temperature
-    );
-    if(score!=null){
-      document.getElementById('score-num').textContent = score;
-      document.getElementById('score-bar').style.width = score+'%';
-      document.getElementById('score-bar').style.background = score>=80?'#4ade80':score>=50?'#fbbf24':'#f87171';
-      document.getElementById('score-label').textContent = score>=80?'เหมาะสำหรับวิ่ง':score>=50?'วิ่งได้ แต่ระวัง':'ไม่ควรวิ่ง';
-      document.getElementById('score-label').style.color = score>=80?'var(--accent)':score>=50?'var(--warn)':'var(--danger)';
+  const pm25s = h.map(r=>r.pm2_5).filter(v=>v!=null);
+  if (pm25s.length>=10) {
+    const recent = pm25s.slice(-10);
+    const prev   = pm25s.slice(-20,-10);
+    const avgRec = recent.reduce((a,b)=>a+b,0)/recent.length;
+    const avgPrv = prev.length ? prev.reduce((a,b)=>a+b,0)/prev.length : avgRec;
+    const diff   = avgRec - avgPrv;
+    const tEl    = document.getElementById('s-trend');
+    const tDet   = document.getElementById('s-trend-detail');
+    if (Math.abs(diff)<1) {
+      tEl.textContent='→ Stable'; tEl.style.color='var(--green)';
+      tDet.textContent='PM2.5 consistent over last 20 min';
+    } else if (diff>0) {
+      tEl.textContent=`↑ Rising (+${diff.toFixed(1)} µg/m³)`; tEl.style.color='var(--red)';
+      tDet.textContent='Last 10 min avg > previous 10 min — worsening';
+    } else {
+      tEl.textContent=`↓ Falling (${diff.toFixed(1)} µg/m³)`; tEl.style.color='var(--green)';
+      tDet.textContent='Last 10 min avg < previous 10 min — improving';
     }
-  }
 
-  if(hist && hist.length){
-    const lbs   = hist.map(r=>fmtTime(r.timestamp));
-    const tmpd  = hist.map(r=>r.temperature);
-    const humd  = hist.map(r=>r.humidity);
-    const uvd   = hist.map(r=>r.uv_index);
-
-    mkChart('chart-wth', lbs, [ mkDs('อุณหภูมิ',tmpd,'#f87171'), mkDs('ความชื้น',humd,'#60a5fa',[4,3]) ]);
-    mkChart('chart-wuv', lbs, [ mkDs('UV',uvd,'#fbbf24') ]);
-
-    if(charts['chart-ov']){
-      charts['chart-ov'].data.datasets[1].data = uvd;
-      charts['chart-ov'].data.labels = lbs;
-      charts['chart-ov'].update();
+    // CV% — coefficient of variation over 24h
+    const mean = pm25s.reduce((a,b)=>a+b,0)/pm25s.length;
+    const sd   = Math.sqrt(pm25s.reduce((a,b)=>a+Math.pow(b-mean,2),0)/pm25s.length);
+    const cv   = mean>0 ? (sd/mean)*100 : 0;
+    setText('s-cv', fmt(cv,0)+'%');
+    const cvLbl = document.getElementById('s-cv-label');
+    if (cvLbl) {
+      if      (cv<15) { cvLbl.textContent='Stable — high I/O ratio confidence'; cvLbl.style.color='var(--green)'; }
+      else if (cv<35) { cvLbl.textContent='Moderate variability';                cvLbl.style.color='var(--yellow)'; }
+      else            { cvLbl.textContent='High variability — estimation less reliable'; cvLbl.style.color='var(--orange)'; }
     }
   }
 }
 
-// ── Load forecast ──────────────────────────────────────────
-async function loadForecast(){
-  const data = await apiFetch('/api/forecast');
-  if(!data || !data.length) return;
 
-  const lbs  = data.map(r=>fmtTime(r.forecast_time));
-  const tmpd = data.map(r=>r.temperature);
-  const uvd  = data.map(r=>r.uv_index);
-  const rnd  = data.map(r=>r.rain_probability);
+function renderIntegration() {
+  alignDatasets();
 
-  mkChart('chart-fc-t', lbs, [ mkDs('อุณหภูมิ',tmpd,'#f87171') ],
-    { scales: { x: { ticks:{ maxTicksLimit:8, color:'#6b7280', font:{size:10} }, grid:{color:'rgba(255,255,255,.04)'}, border:{color:'rgba(255,255,255,.07)'} },
-                y: { ticks:{ color:'#6b7280', font:{size:10} }, grid:{color:'rgba(255,255,255,.04)'}, border:{color:'rgba(255,255,255,.07)'} } } });
-  mkChart('chart-fc-uv', lbs, [ mkDs('UV',uvd,'#fbbf24') ],
-    { scales: { x:{ ticks:{maxTicksLimit:5,color:'#6b7280',font:{size:10}}, grid:{color:'rgba(255,255,255,.04)'}, border:{color:'rgba(255,255,255,.07)'} },
-                y:{ ticks:{color:'#6b7280',font:{size:10}}, grid:{color:'rgba(255,255,255,.04)'}, border:{color:'rgba(255,255,255,.07)'} } } });
-  mkChart('chart-fc-r', lbs, [ mkDs('ฝน',rnd,'#60a5fa',[3,2]) ],
-    { scales: { x:{ ticks:{maxTicksLimit:5,color:'#6b7280',font:{size:10}}, grid:{color:'rgba(255,255,255,.04)'}, border:{color:'rgba(255,255,255,.07)'} },
-                y:{ ticks:{color:'#6b7280',font:{size:10},callback:v=>v+'%'}, grid:{color:'rgba(255,255,255,.04)'}, border:{color:'rgba(255,255,255,.07)'} } } });
+
+  if (G.aligned.length) {
+    const lbs    = G.aligned.map(a => fmtHour(a.ts));
+    const inPm   = G.aligned.map(a => a.sensor.pm2_5!=null ? +a.sensor.pm2_5.toFixed(1) : null);
+    const outPm  = G.aligned.map(a => a.weather.pm2_5!=null ? +a.weather.pm2_5.toFixed(1) : null);
+    const deltaPm= G.aligned.map(a => {
+      if (a.sensor.pm2_5==null || a.weather.pm2_5==null) return null;
+      return +(a.weather.pm2_5 - a.sensor.pm2_5).toFixed(1);
+    });
+
+    const canvas = document.getElementById('chart-int'); if(canvas) {
+      if (charts['chart-int']) { charts['chart-int'].destroy(); delete charts['chart-int']; }
+      charts['chart-int'] = new Chart(canvas, {
+        type:'line',
+        data:{ labels:lbs, datasets:[
+          mkDs('Indoor PM2.5 [hourly avg]', inPm,   '#38bdf8', [], true, 'rgba(56,189,248,.05)'),
+          mkDs('Outdoor PM2.5 [OpenAQ]',    outPm,  '#22d3a0', [], false),
+          { ...mkDs('ΔPM (Out−In)', deltaPm, '#a855f7', [4,3]), borderWidth:1.2 }
+        ]},
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{display:false}, tooltip:{mode:'index',intersect:false} },
+          scales:{ x:SX.x, y:{ ...SX.y, title:{display:true,text:'PM2.5 µg/m³',color:'#5a6a7e',font:{size:9}} } }
+        }
+      });
+    }
+  }
+
+  const rows = G.aligned.slice(-12).reverse();
+  const tbody = document.getElementById('align-tbody');
+  if (!rows.length) { tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">No aligned data yet — load data first</td></tr>'; return; }
+
+  tbody.innerHTML = rows.map(a => {
+    const inPm  = a.sensor.pm2_5  != null ? fmt(a.sensor.pm2_5,1)   : '--';
+    const outPm = a.weather.pm2_5 != null ? fmt(a.weather.pm2_5,1)  : '--';
+    const aqiV  = a.weather.aqi_us!= null ? a.weather.aqi_us        : '--';
+    const delta = (a.sensor.pm2_5!=null&&a.weather.pm2_5!=null)
+      ? (a.weather.pm2_5-a.sensor.pm2_5).toFixed(1) : '--';
+    const deltaCol = delta!='--' ? (delta>0?'var(--orange)':delta<0?'var(--blue)':'var(--muted)') : 'var(--muted)';
+    const temp  = a.weather.temperature!=null ? fmt(a.weather.temperature,1) : '--';
+    const uv    = a.weather.uv_index!=null ? fmt(a.weather.uv_index,1) : '--';
+
+    const res = calcScore(a.weather.aqi_us, a.weather.pm2_5, a.weather.temperature,
+                           a.weather.humidity, a.weather.uv_index, a.weather.rain_probability, G.includeRain);
+    const sc = res ? res.score : null;
+    const scCol = sc!=null ? scoreColor(sc) : 'var(--muted)';
+
+    return `<tr>
+      <td>${fmtHour(a.ts)}</td>
+      <td>${inPm}</td>
+      <td>${outPm}</td>
+      <td>${aqiV}</td>
+      <td style="color:${deltaCol}">${delta!='--'?(+delta>=0?'+':'')+delta:'--'}</td>
+      <td>${temp}</td><td>${uv}</td>
+      <td style="color:${scCol};font-weight:600">${sc??'--'}</td>
+    </tr>`;
+  }).join('');
+}
+
+
+function renderForecast() {
+  const fc = G.forecast; if (!fc.length) return;
+  const lbs = fc.map(r => fmtTime(r.forecast_time));
+  const fcX = { ticks:{maxTicksLimit:8,color:'#3a4858',font:{size:10}}, grid:{color:'rgba(255,255,255,.04)'}, border:{color:'rgba(255,255,255,.06)'} };
+
+  mkChart('chart-fc-t',  lbs, [mkDs('Temp °C', fc.map(r=>r.temperature), '#ef4444', [], true, 'rgba(239,68,68,.05)')], { scales:{ x:fcX, y:SX.y } });
+  mkChart('chart-fc-uv', lbs, [mkDs('UV Index', fc.map(r=>r.uv_index),   '#f0b429')], { scales:{ x:fcX, y:SX.y } });
+  mkChart('chart-fc-r',  lbs, [mkDs('Rain %',   fc.map(r=>r.rain_probability), '#38bdf8', [3,2])], { scales:{ x:fcX, y:SX.y } });
 
   const tbody = document.getElementById('fc-tbody');
-  tbody.innerHTML = data.slice(0,20).map(r=>`
-    <tr>
+  tbody.innerHTML = fc.slice(0,20).map(r => {
+    const res = calcScore(null, null, r.temperature, r.humidity, r.uv_index, r.rain_probability, G.includeRain);
+    const sc = res ? res.score : null;
+    const scCol = sc!=null ? scoreColor(sc) : 'var(--muted)';
+    return `<tr>
       <td>${fmtTime(r.forecast_time)}</td>
       <td>${fmt(r.temperature,1)} °C</td>
       <td>${fmt(r.humidity,0)} %</td>
       <td>${fmt(r.rain_probability,0)} %</td>
       <td>${fmt(r.uv_index,1)}</td>
-    </tr>`).join('');
+      <td style="color:${scCol};font-weight:600">${sc??'--'}</td>
+    </tr>`;
+  }).join('');
 }
 
-// ── Load all ───────────────────────────────────────────────
-async function loadAll(){
-  setStatus(true, 'กำลังโหลด...');
+
+async function safeFetch(path) {
   try {
-    await Promise.all([ loadSensor(), loadWeather(), loadForecast() ]);
-    setStatus(true, 'อัปเดตเมื่อ '+new Date().toLocaleTimeString('th-TH'));
-  } catch(e){
-    setStatus(false, 'เชื่อมต่อไม่ได้ — '+e.message+' (ตรวจสอบ URL และ CORS ใน Node-RED)');
+    const data = await apiFetch(path);
+    dbgLog('✅ ' + path, data);
+    return { ok: true, data };
+  } catch(e) {
+    dbgLog('❌ ' + path, e.message);
+    return { ok: false, data: null, error: e.message };
   }
 }
 
-// ── Auto refresh ────────────────────────────────────────────
-let autoTimer = null;
-function toggleAuto(){
-  if(autoTimer){ clearInterval(autoTimer); autoTimer=null; document.getElementById('auto-label').textContent='Auto OFF'; }
-  else { autoTimer=setInterval(loadAll,60000); document.getElementById('auto-label').textContent='Auto ON (1 min)'; loadAll(); }
+const _dbgLines = [];
+function dbgLog(label, detail) {
+  const time = new Date().toLocaleTimeString('en-US',{hour12:false});
+  const line = `[${time}] ${label}` + (detail ? ': ' + (typeof detail==='string' ? detail : JSON.stringify(detail)).slice(0,120) : '');
+  _dbgLines.unshift(line);
+  if (_dbgLines.length > 20) _dbgLines.pop();
+  const el = document.getElementById('dbg-panel');
+  if (el && el.style.display !== 'none') el.textContent = _dbgLines.join('\n');
+}
+function toggleDebug() {
+  const el = document.getElementById('dbg-panel');
+  const btn = document.getElementById('dbg-btn');
+  if (!el) return;
+  const shown = el.style.display !== 'none';
+  el.style.display = shown ? 'none' : 'block';
+  if (btn) btn.textContent = shown ? '🔍 Debug' : '🔍 Hide Debug';
+  if (!shown) el.textContent = _dbgLines.join('\n') || '(no logs yet — press Refresh)';
 }
 
-// ── Tab switch ─────────────────────────────────────────────
-function switchTab(name, btn){
+
+async function loadAll() {
+  setLoading(true, 'Fetching from Node-RED...', base() + '/api/sensor/latest');
+  setStatus('loading', 'Connecting to ' + base() + ' ...');
+  dbgLog('🔄 loadAll started', base());
+
+  try {
+
+    const [sLatest, sHist, wLatest, wHist, fc] = await Promise.all([
+      safeFetch('/api/sensor/latest'),
+      safeFetch('/api/sensor/history?hours=24'),
+      safeFetch('/api/weather/latest'),
+      safeFetch('/api/weather/history?hours=24'),
+      safeFetch('/api/forecast')
+    ]);
+
+  
+    G.sensor      = sLatest.ok  ? sLatest.data  : null;
+    G.sensorHist  = sHist.ok  && Array.isArray(sHist.data)  ? sHist.data  : [];
+    G.weather     = wLatest.ok  ? wLatest.data  : null;
+    G.weatherHist = wHist.ok  && Array.isArray(wHist.data)  ? wHist.data  : [];
+    G.forecast    = fc.ok     && Array.isArray(fc.data)     ? fc.data     : [];
+
+   
+    const failed = [
+      !sLatest.ok ? 'sensor/latest('  + sLatest.error + ')' : null,
+      !sHist.ok   ? 'sensor/history(' + sHist.error   + ')' : null,
+      !wLatest.ok ? 'weather/latest(' + wLatest.error + ')' : null,
+      !wHist.ok   ? 'weather/history('+ wHist.error   + ')' : null,
+      !fc.ok      ? 'forecast('       + fc.error       + ')' : null
+    ].filter(Boolean);
+
+    const anyLoaded = G.sensor || G.weather || G.sensorHist.length || G.weatherHist.length;
+
+    if (!anyLoaded) {
+     
+      const url = base() + '/api/sensor/latest';
+      setStatus('err',
+        `⚠️ All APIs failed. Check: (1) Host/Prefix correct? (2) Node-RED running? ` +
+        `(3) Try opening in browser: ${url} — click 🔍 Debug for details`);
+      dbgLog('💥 All 5 endpoints failed', failed.join(' | '));
+      setLoading(false);
+      return;
+    }
+
+  
+    G.sensorHourly = aggregateSensorHourly(G.sensorHist);
+
+
+    const hasPm  = G.weather?.pm2_5 != null;
+    const noteEl = document.getElementById('weather-api-pm-note');
+    if (noteEl) {
+      noteEl.innerHTML = hasPm
+        ? '<span class="pill pill-r">PM2.5 REAL ✓</span> OpenAQ PM2.5 data available in weather_data'
+        : '<span class="pill pill-e">PM2.5 PENDING</span> pm2_5 column null — OpenAQ collection may still be starting';
+    }
+
+
+    renderAQICard();
+    renderPMCard();
+    renderWeatherCards();
+    renderScore();
+    renderContextSentence();
+    renderOverviewChart();
+    renderSensorCharts();
+    renderOutdoorCharts();
+    renderIntegration();
+    renderForecast();
+
+    G.lastOk = new Date();
+    const statusMsg = failed.length
+      ? `⚠️ Partial data (${5 - failed.length}/5 sources OK) · ${failed.join(', ')}`
+      : `✅ All sources OK · ${G.lastOk.toLocaleTimeString('en-US')} · Sensor: ${G.sensorHist.length}r · Weather: ${G.weatherHist.length}r · Aligned: ${G.aligned.length}`;
+    setStatus(failed.length ? 'err' : 'ok', statusMsg);
+
+  } catch(e) {
+
+    setStatus('err', 'Unexpected error: ' + e.message + ' — click 🔍 Debug');
+    dbgLog('💥 Unexpected error in loadAll', e.message);
+    console.error(e);
+  } finally {
+
+    setLoading(false);
+  }
+}
+
+async function loadSensor() { /* kept for compatibility */ }
+async function loadWeather() { /* kept for compatibility */ }
+async function loadForecast() { /* kept for compatibility */ }
+
+
+function onRainToggle() {
+  G.includeRain = document.getElementById('rain-toggle').checked;
+  if (G.weather || G.sensor) {
+    renderScore();
+    renderContextSentence();
+    renderIntegration();
+    renderForecast();
+  }
+}
+
+
+function toggleAuto() {
+  if (G.autoTimer) {
+    clearInterval(G.autoTimer); G.autoTimer=null;
+    setText('auto-lbl','⏱ Auto OFF');
+  } else {
+    G.autoTimer = setInterval(loadAll, 60000);
+    setText('auto-lbl','⏱ Auto ON (1min)');
+    loadAll();
+  }
+}
+
+function switchTab(name, btn) {
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
   btn.classList.add('active');
+  if (name==='sensor')    renderSensorCharts();
+  if (name==='outdoor')   renderOutdoorCharts();
+  if (name==='integrate') renderIntegration();
+  if (name==='forecast')  renderForecast();
 }
 
-// ── Clock ──────────────────────────────────────────────────
-function tick(){ document.getElementById('clock').textContent = new Date().toLocaleTimeString('th-TH'); }
-tick(); setInterval(tick,1000);
+function tick() { setText('clock', new Date().toLocaleTimeString('en-US',{hour12:false})); }
+tick(); setInterval(tick, 1000);
+
+
+window.addEventListener('DOMContentLoaded', () => {
+  
+  setTimeout(loadAll, 300);
+});
 </script>
 </body>
 </html>
