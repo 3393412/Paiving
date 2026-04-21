@@ -22,7 +22,7 @@ and 5-day forecast — all in one HTML file.
 ## 🚀 How to Run
 
 ### Open directly in browser
-1. Download `dashboard_final.html`
+1. Download `dashboard.html`
 2. Open it in any modern browser (Chrome, Firefox, Edge)
 3. Enter your Node-RED host and prefix in the config bar
 4. Press **⟳ Refresh**
